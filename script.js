@@ -134,6 +134,7 @@ function route() {
   if (!['home', 'multiplayer', 'typing', 'results', 'stats', 'settings'].includes(destination)) destination = 'home';
   if (destination === 'typing' && !activeSession) destination = 'home';
   if (destination === 'results' && !result) destination = 'home';
+  if (multiplayer.roomId && !['multiplayer', 'typing', 'results'].includes(destination)) leaveRoom();
   if (page === 'typing' && destination !== 'typing' && activeSession) {
     engine.getState();
     engine.restart();
@@ -183,6 +184,7 @@ function begin(practice = false) {
     $('#custom-text').removeAttribute('aria-invalid');
     result = null;
     drillContext = drill ? { ...drill, baseline: keyStats.filter(row => drill.targetKeys.includes(row.key)) } : null;
+    if (multiplayer.roomId) leaveRoom();
     multiplayer.active = false;
     hideMultiplayerCars();
     renderPracticeContext();
@@ -201,6 +203,9 @@ function startPractice() { return begin(true); }
 function renderPracticeContext() {
   $('#practice-context').hidden = !drillContext;
   $('#race-experience').hidden = !!drillContext;
+  $('#tab-practice').setAttribute('aria-pressed', String(!!drillContext));
+  $('#tab-practice').classList.toggle('active', !!drillContext);
+  $('#tab-race-track').classList.toggle('active', !drillContext);
   $('#typing-title').textContent = drillContext ? 'Build your accuracy.' : 'Find your flow.';
   if (!drillContext) return;
   $('#practice-targets').replaceChildren(...drillContext.targetKeys.map(key => {
@@ -232,12 +237,23 @@ function weakText(rows) {
 
 // FULL QWERTY ERROR HEATMAP KEYBOARD (MATCHING IMAGE 1)
 function renderKeyboard(target, stats = []) {
-  const map = new Map(stats.map(row => [row.key.toLowerCase(), row]));
+  const plain = "`" + "1234567890-=[]" + String.fromCharCode(92) + ";',./";
+  const shifted = '~!@#$%^&*()_+{}|:"<>?';
+  const map = new Map();
+  for (const row of stats) {
+    const index = shifted.indexOf(row.key);
+    const key = row.key === '\n' ? 'enter' : row.key === ' ' ? 'space' : index < 0 ? row.key.toLowerCase() : plain[index];
+    const total = map.get(key) || {attempts: 0, errors: 0};
+    total.attempts += row.attempts;
+    total.errors += row.errors;
+    total.errorRate = total.attempts ? total.errors / total.attempts : 0;
+    map.set(key, total);
+  }
   const rows = [
     ['`','1','2','3','4','5','6','7','8','9','0','-','=','BACKSPACE'],
     ['TAB','Q','W','E','R','T','Y','U','I','O','P','[',']','\\'],
     ['CAPS','A','S','D','F','G','H','J','K','L',';',"'",'ENTER'],
-    ['SHIFT','Z','X','C','V','B','N','M',',','.','/','SHIFT']
+    ['SHIFT','Z','X','C','V','B','N','M',',','.','/','SHIFT'], ['SPACE']
   ];
   const fragment = document.createDocumentFragment();
   rows.forEach((row, rowIndex) => {
@@ -248,14 +264,14 @@ function renderKeyboard(target, stats = []) {
       const stat = map.get(lower);
       const keyEl = document.createElement('div');
       keyEl.className = 'key';
-      keyEl.textContent = keyStr;
+      keyEl.textContent = keyStr === 'BACKSPACE' ? '⌫' : keyStr;
       if (['BACKSPACE', 'TAB', 'CAPS', 'ENTER', 'SHIFT'].includes(keyStr)) {
         keyEl.classList.add('wide');
       }
       if (stat && stat.attempts > 0) {
         if (stat.attempts < 3) keyEl.classList.add('sample');
-        if (stat.errorRate > 0.15) keyEl.classList.add('high');
         if (stat.errorRate > 0.50) keyEl.classList.add('critical');
+        else if (stat.errorRate > 0.15) keyEl.classList.add('high');
         else if (stat.errorRate >= 0.05) keyEl.classList.add('mid');
         else keyEl.classList.add('low');
         keyEl.title = `${keyStr} · ${Math.round(stat.errorRate * 100)}% error rate · ${stat.attempts} attempts`;
@@ -275,11 +291,19 @@ function updateRacerCar(carElement, progressPercent, tagElement, labelText) {
   const routePath = $('#circuit-route');
   if (routePath && typeof routePath.getTotalLength === 'function') {
     const length = routePath.getTotalLength();
+    if (!routePath.dataset.marked) {
+      for (const marker of $$('.circuit-marker')) {
+        const point = routePath.getPointAtLength(length * Number(marker.dataset.fraction));
+        marker.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
+      }
+      routePath.dataset.marked = 'true';
+    }
     const distance = length * (Math.max(0, Math.min(100, progressPercent)) / 100);
     const point = routePath.getPointAtLength(distance);
     const before = routePath.getPointAtLength(Math.max(0, distance - 1));
     const after = routePath.getPointAtLength(Math.min(length, distance + 1));
     const angle = Math.atan2(after.y - before.y, after.x - before.x) * 180 / Math.PI;
+    if (tagElement) tagElement.parentElement.setAttribute('transform', 'rotate(' + (-angle) + ') translate(-26 -30)');
     carElement.setAttribute('transform', `translate(${point.x} ${point.y}) rotate(${angle})`);
   }
   if (tagElement && labelText) tagElement.textContent = labelText;
@@ -296,7 +320,7 @@ function renderTyping() {
   const state = engine.getState();
   const progress = state.position / state.characters.length * 100;
   $('#racer').style.left = `${progress}%`;
-  updateRacerCar($('#racer'), progress, $('#car-tag-you'), `YOU: ${Math.round(state.wpm)} WPM`);
+  updateRacerCar($('#racer'), progress, $('#car-tag-you'), `YOU: ${format(state.wpm)} WPM`);
 
   // Update Telemetry & Status matching Image 1
   $('#live-wpm').textContent = format(state.wpm);
@@ -311,6 +335,14 @@ function renderTyping() {
     $('#btn-status-ready').textContent = state.status === 'ready' ? '🏁 READY TO RACE' : state.status === 'finished' ? '🏁 FINISHED' : '⚡ RACING';
   }
 
+  for (const button of $$('#live-difficulty-group button, #live-duration-group button')) {
+    const selected = button.dataset.time ? Number(button.dataset.time) === state.duration
+      : button.dataset.diff === (state.mode === 'custom' ? 'custom' : state.difficulty);
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+    button.disabled = multiplayer.active;
+  }
+  $('#btn-new-prompt').disabled = $('#btn-custom-passage').disabled = multiplayer.active;
   // Update Ghost / Opponent car
   if (multiplayer.active) {
     multiplayer.localPlayer.progress = Math.round(progress);
@@ -322,26 +354,29 @@ function renderTyping() {
       wpm: format(state.wpm)
     });
 
+    hideMultiplayerCars();
+    $('#opponent-name-label').textContent = 'LOCAL OPPONENT';
+    $('#ghost-percent-label').textContent = 'Waiting for a rival';
+    $('#ghost-wpm-label').textContent = '—';
     let telemetryStr = `YOU · ${format(state.wpm)} WPM`;
-    multiplayer.players.forEach(p => {
-      if (p.id !== multiplayer.localPlayer.id) {
-        const carEl = $(`#${p.carId}`);
-        updateRacerCar(carEl, p.progress || 0, $('#car-tag-ghost'), `${p.name.toUpperCase()}: ${Math.round(p.wpm || 0)} WPM`);
-        if ($('#opponent-name-label')) $('#opponent-name-label').textContent = p.name.toUpperCase();
-        if ($('#ghost-percent-label')) $('#ghost-percent-label').textContent = `${Math.round(p.progress || 0)}% Done`;
-        if ($('#ghost-wpm-label')) $('#ghost-wpm-label').textContent = `${p.wpm || '0.0'} WPM`;
+    const opponents = [...multiplayer.players.values()].filter(player => player.id !== multiplayer.localPlayer.id);
+    opponents.forEach((p, index) => {
+        const carEl = document.getElementById(mpCarIds[1 + index]);
+        updateRacerCar(carEl, p.progress || 0, carEl?.querySelector('text'), `${p.name.toUpperCase()}: ${Math.round(p.wpm || 0)} WPM`);
+        if (index === 0) {
+          $('#opponent-name-label').textContent = p.name.toUpperCase();
+          $('#ghost-percent-label').textContent = Math.round(p.progress || 0) + '% Done';
+          $('#ghost-wpm-label').textContent = format(Number(p.wpm) || 0) + ' WPM';
+        }
         telemetryStr += ` · ${p.name.toUpperCase()} · ${p.wpm || '0.0'} WPM`;
-      }
     });
     $('#race-telemetry').textContent = telemetryStr;
   } else {
     $('#race-telemetry').textContent = `YOU · ${format(state.wpm)} WPM`;
-    // Simulated ghost car based on PB or standard pace
-    const ghostProgress = Math.min(100, progress * 0.92);
-    const ghostWpm = format(Math.max(0, state.wpm * 0.95));
-    updateRacerCar($('#racer-p2'), ghostProgress, $('#car-tag-ghost'), `GHOST: ${Math.round(ghostWpm)} WPM`);
-    if ($('#ghost-percent-label')) $('#ghost-percent-label').textContent = `${Math.round(ghostProgress)}% Done`;
-    if ($('#ghost-wpm-label')) $('#ghost-wpm-label').textContent = `${ghostWpm} WPM`;
+    hideMultiplayerCars();
+    $('#opponent-name-label').textContent = 'PERSONAL BEST GHOST';
+    $('#ghost-percent-label').textContent = 'Unavailable · no recorded timeline';
+    $('#ghost-wpm-label').textContent = '—';
   }
 
   $('#race-progress').textContent = `${Math.round(progress)}% COMPLETE`;
@@ -359,7 +394,7 @@ function renderTyping() {
     $('#prompt').replaceChildren(fragment);
     const current = $('#prompt .current');
     if (current) {
-      const container = $('#prompt');
+      const container = $('.crt-screen');
       const relative = current.getBoundingClientRect().top - container.getBoundingClientRect().top;
       if (relative > container.clientHeight - 40 || relative < 0) container.scrollTop += relative - 40;
     }
@@ -386,7 +421,7 @@ function renderTyping() {
           return b;
         }));
       } else {
-        badgesWrap.innerHTML = '<span class="key-badge" style="background:#85d7a0;color:#111">CLEAN</span>';
+        badgesWrap.textContent = state.totalKeystrokes ? 'No ranked keys yet' : 'Awaiting input';
       }
     }
     renderedAttempts = state.totalKeystrokes;
@@ -424,7 +459,7 @@ function renderLeaderboard() {
   list.replaceChildren(...sorted.map((res, i) => {
     const row = document.createElement('div');
     row.className = 'leaderboard-row';
-    row.innerHTML = `<span>#${i + 1} ${res.name}</span><span>${res.wpm} WPM · ${res.accuracy}% ACC</span>`;
+    row.textContent = `#${i + 1} ${res.name} · ${res.wpm} WPM · ${res.accuracy}% ACC`;
     return row;
   }));
 }
@@ -488,21 +523,21 @@ function initMultiplayerChannel(roomId) {
     multiplayer.channel = new BroadcastChannel(channelName);
     multiplayer.channel.onmessage = event => handleMultiplayerMessage(event.data);
   }
-  window.addEventListener('storage', event => {
-    if (event.key === channelName && event.newValue) {
+}
+window.addEventListener('storage', event => {
+    if (!multiplayer.channel && multiplayer.roomId && event.key === 'type_e_room_' + multiplayer.roomId && event.newValue) {
       try {
         const msg = JSON.parse(event.newValue);
         if (msg.senderId !== multiplayer.localPlayer.id) handleMultiplayerMessage(msg);
       } catch {}
     }
-  });
-}
+});
 
 function broadcastMultiplayer(msg) {
   msg.senderId = multiplayer.localPlayer.id;
   msg.timestamp = Date.now();
   if (multiplayer.channel) {
-    try { multiplayer.channel.postMessage(msg); } catch {}
+    try { multiplayer.channel.postMessage(msg); return; } catch {}
   }
   try {
     localStorage.setItem('type_e_room_' + multiplayer.roomId, JSON.stringify(msg));
@@ -516,6 +551,7 @@ function handleMultiplayerMessage(msg) {
       if (multiplayer.isHost) {
         const existing = multiplayer.players.get(msg.player.id);
         if (!existing) {
+          if (multiplayer.players.size >= mpCarIds.length) return;
           const index = multiplayer.players.size;
           msg.player.carId = mpCarIds[index % mpCarIds.length];
           msg.player.color = mpColors[index % mpColors.length];
@@ -546,7 +582,7 @@ function handleMultiplayerMessage(msg) {
       break;
     }
     case 'START_COUNTDOWN': {
-      $('#mp-modal-backdrop').hidden = true;
+
       startCountdownSequence(msg);
       break;
     }
@@ -579,23 +615,22 @@ function updateLobbyUI() {
   list.replaceChildren(...Array.from(multiplayer.players.values()).map(p => {
     const card = document.createElement('div');
     card.className = 'racer-card';
-    card.innerHTML = `
-      <div class="racer-color-dot" style="background:${p.color}"></div>
-      <div class="racer-info">
-        <strong>${p.name}${p.id === multiplayer.localPlayer.id ? ' (You)' : ''}</strong>
-        <span>Car: ${p.carId.toUpperCase()}</span>
-      </div>
-    `;
+    const dot = document.createElement('span');
+    dot.className = 'racer-color-dot';
+    dot.style.backgroundColor = p.color;
+    const name = document.createElement('strong');
+    name.textContent = p.name + (p.id === multiplayer.localPlayer.id ? ' (You)' : '');
+    card.append(dot, name);
     return card;
   }));
 
   const startBtn = $('#btn-start-multiplayer-race');
   if (multiplayer.isHost) {
     startBtn.hidden = false;
-    $('#lobby-instructions').textContent = 'You are the host. Share the invite link or Room ID, then click Start Race when ready.';
+    $('#lobby-instructions').textContent = 'You are the host. Open the invite in another tab of this browser to add a rival.';
   } else {
     startBtn.hidden = true;
-    $('#lobby-instructions').textContent = 'Connected to room! Waiting for the host to start the race...';
+    $('#lobby-instructions').textContent = multiplayer.players.size > 1 ? 'Connected. Waiting for the host to start.' : 'Waiting for the host in another tab of this browser.';
   }
 }
 
@@ -659,6 +694,7 @@ function leaveRoom() {
     }
   }
   multiplayer.active = false;
+  multiplayer.channel = null;
   multiplayer.roomId = null;
   multiplayer.players.clear();
   $('#mp-lobby').hidden = true;
@@ -706,7 +742,7 @@ function copyRoomId() {
 function copyInviteLink() {
   if (!multiplayer.roomId) return;
   const url = `${window.location.origin}${window.location.pathname}#multiplayer?room=${multiplayer.roomId}`;
-  copyToClipboard(url, 'Invite link copied to clipboard! Send it to your friend.');
+  copyToClipboard(url, 'Invite link copied to clipboard! Open it in another tab of this browser.');
 }
 
 function copyToClipboard(text, successMessage) {
@@ -746,10 +782,9 @@ function checkUrlForInvite() {
     const qPart = fullHash.slice(fullHash.indexOf('?'));
     roomId = new URLSearchParams(qPart).get('room');
   }
-  if (roomId) {
+  if (roomId && !multiplayer.roomId) {
     $('#join-room-input').value = roomId;
-    $('#mp-modal-backdrop').hidden = false;
-    joinRoom(roomId);
+    if (multiplayer.roomId !== roomId && location.hash.startsWith('#multiplayer')) joinRoom(roomId);
   }
 }
 
@@ -766,13 +801,15 @@ function syncCardOption(target, val, fromSelect = false) {
         source: '#source',
         theme: '#home-theme'
       };
-      const sel = $(selectMap[target]);
+      const sel = selectMap[target] ? $(selectMap[target]) : null;
+      if (target === 'layout') document.documentElement.dataset.layout = val;
       if (sel && sel.value !== String(val)) {
         sel.value = String(val);
         sel.dispatchEvent(new Event('change', { bubbles: true }));
       }
     }
     $$(`.option-pill[data-target="${target}"]`).forEach(p => {
+      p.querySelector('input').checked = p.dataset.val === String(val);
       if (p.dataset.val === String(val)) p.classList.add('selected');
       else p.classList.remove('selected');
     });
@@ -793,20 +830,25 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#duration').addEventListener('change', () => syncCardOption('duration', $('#duration').value, true));
   $('#source').addEventListener('change', () => syncCardOption('source', $('#source').value, true));
 
-  // Card option click handler
-  $$('.option-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      const target = pill.dataset.target;
-      const val = pill.dataset.val;
-      if (target === 'source' && val === 'custom') {
-        $('#source').value = 'custom';
-        $('#source').dispatchEvent(new Event('change', { bubbles: true }));
-        syncCardOption('source', 'custom');
-      } else if (target) {
-        syncCardOption(target, val);
-      }
-    });
-  });
+  $$('.option-pill input').forEach(input => input.addEventListener('change', () => {
+    const { target, val } = input.closest('.option-pill').dataset;
+    if (target === 'difficulty' && val === 'custom') {
+      syncCardOption('source', 'custom');
+      $('#custom-text').focus();
+    } else if (target === 'difficulty') {
+      syncCardOption('source', 'default');
+      syncCardOption(target, val);
+    } else {
+      syncCardOption(target, val);
+    }
+    if (target === 'source' || val === 'custom') {
+      $$('.option-pill[data-target="difficulty"]').forEach(pill => {
+        const selected = pill.dataset.val === ($('#source').value === 'custom' ? 'custom' : $('#difficulty').value);
+        pill.classList.toggle('selected', selected);
+        pill.querySelector('input').checked = selected;
+      });
+    }
+  }));
 
   $('#session-form').addEventListener('submit', event => {
     event.preventDefault();
@@ -838,75 +880,58 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#history-filter').addEventListener('change', renderStats);
   $('#export-csv').addEventListener('click', exportHistory);
 
-  // Image 1 Racer Live Controls
-  $$('#live-difficulty-group .ctrl-pill').forEach(btn => {
-    btn.addEventListener('click', () => {
-      $$('#live-difficulty-group .ctrl-pill').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const diff = btn.dataset.diff;
-      if (diff === 'custom') {
-        go('home');
-        syncCardOption('source', 'custom');
-      } else {
-        $('#difficulty').value = diff;
-        $('#source').value = 'default';
-        engine.configure({ difficulty: diff, duration: Number($('#duration').value), customText: null, mode: 'test' });
-        resetRendering();
-        engine.restart();
-        renderTyping();
-        $('#typing-input').focus();
-      }
-    });
-  });
-
-  $$('#live-duration-group .ctrl-pill').forEach(btn => {
-    btn.addEventListener('click', () => {
-      $$('#live-duration-group .ctrl-pill').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const dur = Number(btn.dataset.time);
-      $('#duration').value = dur;
-      engine.configure({ difficulty: $('#difficulty').value, duration: dur, customText: null, mode: 'test' });
-      resetRendering();
-      engine.restart();
-      renderTyping();
-      $('#typing-input').focus();
-    });
-  });
-
-  $('#btn-new-prompt')?.addEventListener('click', () => {
-    const diff = $('#difficulty').value;
-    const prompts = Zenith.PROMPTS[diff] || Zenith.PROMPTS.medium;
-    const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-    engine.configure({ difficulty: diff, duration: Number($('#duration').value), customText: randomPrompt, mode: 'test' });
+  function editCustomPassage() {
+    syncCardOption('source', 'custom');
+    go('home');
+    setTimeout(() => $('#custom-text').focus(), 0);
+  }
+  $('#btn-status-ready').addEventListener('click', () => $('#typing-input').focus());
+  $$('#live-difficulty-group .ctrl-pill').forEach(button => button.addEventListener('click', () => {
+    if (button.dataset.diff === 'custom') return editCustomPassage();
+    syncCardOption('difficulty', button.dataset.diff);
+    syncCardOption('source', 'default');
+    begin(engine.mode === 'practice');
+  }));
+  $$('#live-duration-group .ctrl-pill').forEach(button => button.addEventListener('click', () => {
+    syncCardOption('duration', button.dataset.time);
+    engine.configure({ difficulty: engine.difficulty, customText: engine.customText, mode: engine.mode, duration: Number(button.dataset.time) });
     resetRendering();
-    engine.restart();
     renderTyping();
     $('#typing-input').focus();
+  }));
+  const alternates = {
+    easy: 'a small red car rolls past the park and turns onto the quiet road',
+    medium: 'The circuit opens at sunrise. Find a steady rhythm through the first turn.',
+    hard: 'Lap 3: enter Sector_B at 09:42, hit 98% accuracy, then log {split: 12.75}.',
+  };
+  $('#btn-new-prompt').addEventListener('click', () => {
+    if (engine.mode === 'practice') return startPractice();
+    const difficulty = engine.difficulty;
+    const next = engine.prompt.join('') === alternates[difficulty] ? Zenith.PROMPTS[difficulty] : alternates[difficulty];
+    syncCardOption('source', 'default');
+    engine.configure({difficulty, duration: engine.duration, customText: next, mode: 'test'});
+    resetRendering(); renderTyping(); $('#typing-input').focus();
   });
-
-  $('#btn-custom-passage')?.addEventListener('click', () => {
-    go('home');
-    syncCardOption('source', 'custom');
-    $('#custom-text').focus();
+  $('#btn-custom-passage').addEventListener('click', editCustomPassage);
+  $('#tab-race-track').addEventListener('click', event => {
+    event.preventDefault();
+    if (engine.mode === 'practice') begin(false);
+    else $('#typing-input').focus();
   });
-
+  $('#btn-sprint-mode').addEventListener('click', () => {
+    if (multiplayer.active) leaveRoom();
+    begin(false);
+  });
   // Sound Toggle
   $('#btn-sound-toggle')?.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
+    $('#btn-sound-toggle').setAttribute('aria-pressed', String(soundEnabled));
     $('#btn-sound-toggle').textContent = soundEnabled ? '🔊 SOUND: ON' : '🔈 SOUND: OFF';
   });
 
   // Typing input handlers
   $('#typing-input').addEventListener('keydown', event => {
     playKeyClick();
-    if (event.key === 'Enter' && (engine.getState().status === 'ready' || engine.getState().status === 'finished')) {
-      event.preventDefault();
-      result = null;
-      resetRendering();
-      engine.restart();
-      renderTyping();
-      return;
-    }
     if (event.key === 'Tab' || event.ctrlKey || event.metaKey || event.altKey || event.isComposing || event.key === 'Process' || event.key === 'Unidentified') return;
     event.preventDefault();
     engine.handleKey(event.key);
@@ -928,11 +953,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Multiplayer Event Listeners & Modal
   $('#btn-head-to-head')?.addEventListener('click', () => {
-    $('#mp-modal-backdrop').hidden = false;
+    go('multiplayer');
   });
-  $('#btn-close-mp-modal')?.addEventListener('click', () => {
-    $('#mp-modal-backdrop').hidden = true;
-  });
+
   $('#btn-create-room')?.addEventListener('click', createRoom);
   $('#btn-join-room')?.addEventListener('click', () => joinRoom());
   $('#btn-copy-id')?.addEventListener('click', copyRoomId);
@@ -942,14 +965,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!multiplayer.isHost) return;
     const diff = $('#mp-difficulty').value;
     const dur = Number($('#mp-duration').value);
-    const prompt = Zenith.PROMPTS[diff] ? Zenith.PROMPTS[diff][0] : 'The quick brown fox jumps over the lazy dog.';
+    const prompt = Zenith.PROMPTS[diff] || Zenith.PROMPTS.medium;
     const startMsg = {
       type: 'START_COUNTDOWN',
       config: { difficulty: diff, duration: dur },
       prompt
     };
     broadcastMultiplayer(startMsg);
-    $('#mp-modal-backdrop').hidden = true;
+
     startCountdownSequence(startMsg);
   });
 

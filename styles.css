@@ -1187,3 +1187,397 @@ th { background: var(--accent); color: #111; }
   .home-footer { flex-direction: column; align-items: center; gap: 8px; }
   .corner-geo { display: none; }
 }
+/* Keep the original dashboard regions, with content-sized panels and reachable controls. */
+html, body {
+  height:auto;
+  min-height:100%;
+  max-height:none;
+  overflow:visible
+}
+body {
+  min-height:100vh
+}
+#home {
+  height:auto;
+  max-height:none;
+  overflow:visible;
+  gap:clamp(16px,2.5vh,30px)
+}
+.site-header {
+  border:2px solid var(--line);
+  margin-top:10px;
+  background:var(--card)
+}
+body:not(.typing-active) .header-left {
+  background:var(--accent);
+  color:#181818;
+  align-self:stretch;
+  padding:5px 18px;
+  display:flex;
+  align-items:center
+}
+.home-hero {
+  padding-block:12px;
+  grid-template-columns:1fr 1fr
+}
+.hero-left h1 {
+  font:950 clamp(44px,5.4vw,86px)/.98 'Arial Black',system-ui,sans-serif;
+  letter-spacing:-.045em
+}
+.hero-highlight {
+  border:0;
+  box-shadow:none;
+  padding:0 .12em .06em
+}
+.hero-sub {
+  font-size:clamp(16px,1.5vw,23px);
+  margin-top:16px
+}
+.hero-keyboard-wrap {
+  width:min(100%,540px);
+  max-height:none
+}
+.hero-keyboard {
+  display:block;
+  width:100%;
+  max-width:100%;
+  height:auto;
+  max-height:300px
+}
+.doodle-top {
+  right:0;
+  top:12%;
+  font-size:14px
+}
+.config-card {
+  padding:13px;
+  min-height:240px
+}
+.card-header h3 {
+  font:800 14px system-ui,sans-serif
+}
+.card-icon {
+  width:38px;
+  height:38px;
+  font-size:20px
+}
+.option-pill {
+  position:relative;
+  min-height:41px
+}
+.option-pill input[type=radio] {
+  display:block;
+  position:absolute;
+  opacity:0;
+  width:1px;
+  height:1px
+}
+.option-pill:has(input:focus-visible), :is(button,a,select,textarea,input):focus-visible,.crt-screen:focus-within {
+  outline:3px solid var(--ink);
+  outline-offset:3px;
+  box-shadow:0 0 0 3px var(--accent)
+}
+.option-pill.selected .radio-custom {
+  border:4px solid #202020;
+  background:var(--accent)
+}
+.option-pill:has(input:disabled),button:disabled {
+  opacity:.55;
+  cursor:not-allowed
+}
+.btn-enter-arena {
+  font:900 clamp(18px,2vw,27px) system-ui,sans-serif;
+  padding:14px 36px
+}
+body.typing-active {
+  height:auto;
+  min-height:100vh;
+  overflow:auto!important
+}
+body.typing-active main,#typing,.racer-dashboard {
+  height:auto;
+  max-height:none;
+  overflow:visible
+}
+.circuit-track {
+  height:clamp(210px,32vh,330px)
+}
+.circuit-racer text {
+  font-size:13px
+}
+.circuit-marker text {
+  font-weight:bold
+}
+.racer-dashboard {
+  align-items:stretch
+}
+.dash-col-main,.dash-col-telemetry {
+  height:auto
+}
+.telemetry-panel,.heatmap-keyboard-panel {
+  justify-content:flex-start;
+  gap:12px
+}
+.telemetry-panel {
+  padding:15px
+}
+.telemetry-details {
+  margin-top:auto;
+  line-height:1.6
+}
+.racer-controls-strip {
+  flex-wrap:wrap;
+  padding:8px;
+  background:var(--card);
+  border:2px solid var(--line);
+  box-shadow:3px 3px var(--shadow)
+}
+.actions-group,.pills-group {
+  flex-wrap:wrap
+}
+.ctrl-pill,.action-btn,.track-toggle-btn {
+  min-height:30px
+}
+.ctrl-pill.active {
+  background:var(--accent)!important;
+  color:#111;
+  outline:1px solid #111
+}
+.dash-split-workspace {
+  min-height:245px
+}
+.crt-screen {
+  min-height:150px;
+  max-height:300px;
+  background:var(--field)
+}
+.crt-monitor-panel,.heatmap-keyboard-panel,.dash-col-main {
+  min-width:0
+}
+.heatmap-keyboard-panel {
+  padding:10px
+}
+.keyboard-header-strip,.weak-keys-banner,.weak-keys-left {
+  gap:6px;
+  flex-wrap:wrap
+}
+.keyboard-board {
+  margin:auto 0
+}
+.key {
+  min-width:0;
+  min-height:32px;
+  padding:0 1px
+}
+.key.wide {
+  flex:1.5;
+  font-size:9px
+}
+[data-layout=compact] .dash-split-workspace {
+  min-height:180px
+}
+[data-layout=compact] .passage {
+  font-size:15px;
+  line-height:1.4
+}
+[data-layout=compact] .circuit-track {
+  height:170px
+}
+[data-layout=split] .dash-split-workspace {
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)
+}
+:root[data-theme=dark] .key.low {
+  background:var(--low)
+}
+:root[data-theme=dark] .key.mid {
+  background:var(--mid)
+}
+:root[data-theme=dark] .key.high {
+  background:var(--high)
+}
+:root[data-theme=dark] .key.critical {
+  background:var(--critical)
+}
+.racer-meta span {
+  color:var(--muted)
+}
+@media(max-width:950px){
+  .site-header,body.typing-active .site-header {
+    flex-wrap:wrap;
+    height:auto;
+    gap:9px;
+    padding:10px
+  }
+  .header-center-tabs,.racer-header-controls,.main-nav {
+    flex-wrap:wrap;
+    gap:6px
+  }
+  .home-hero {
+    grid-template-columns:1fr 1fr
+  }
+  .config-cards-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr))
+  }
+  body.typing-active main{
+    padding:0 10px 16px
+  }
+  .racer-dashboard {
+    flex-direction:column
+  }
+  .dash-col-telemetry {
+    width:100%
+  }
+  .telemetry-panel {
+    height:auto;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr))
+  }
+  .telemetry-header,.telemetry-details {
+    grid-column:1/-1
+  }
+  .dash-split-workspace,[data-layout=split] .dash-split-workspace {
+    grid-template-columns:1fr
+  }
+  .crt-screen {
+    min-height:120px
+  }
+  .racer-controls-strip,.weak-keys-banner {
+    align-items:flex-start
+  }
+  .dash-col-main {
+    gap:12px
+  }
+  .circuit-track {
+    height:190px
+  }
+  .main-nav{
+    justify-content:center
+  }
+  .modal-window,.settings-panel {
+    max-width:100%
+  }
+  .mp-setup-grid {
+    grid-template-columns:1fr
+  }
+}
+@media(max-width:560px){
+  .home-hero {
+    grid-template-columns:1fr;
+    text-align:left
+  }
+  .hero-keyboard-wrap {
+    max-width:360px
+  }
+  .hero-keyboard {
+    max-height:195px
+  }
+  .config-cards-grid {
+    grid-template-columns:1fr
+  }
+  .config-card {
+    min-height:0
+  }
+  .site-header>* {
+    max-width:100%
+  }
+  .racer-header-controls {
+    display:flex;
+    flex-wrap:wrap
+  }
+  .racer-status-box{
+    min-width:0;
+    padding:6px
+  }
+  .racer-meta{
+    gap:3px
+  }
+  .racer-status-box strong {
+    font-size:10px
+  }
+  .control-pill,.tab-btn {
+    padding:5px;
+    font-size:10px
+  }
+  .keyboard-board .key {
+    font-size:8px
+  }
+  .keyboard-board .key.wide {
+    font-size:7px
+  }
+  .keyboard-row {
+    gap:2px
+  }
+  .circuit-track {
+    height:auto;
+    aspect-ratio:3.1
+  }
+  .circuit-top-toggles {
+    top:2px;
+    gap:3px
+  }
+  .track-toggle-btn {
+    white-space:nowrap;
+    font-size:8px;
+    min-height:19px;
+    padding:1px 4px
+  }
+  .btn-enter-arena {
+    padding:12px
+  }
+  .weak-title,.keyboard-header-strip {
+    font-size:10px
+  }
+  .history-panel{
+    min-width:0
+  }
+  .table-scroll{
+    overflow:auto
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .circuit-racer,.option-pill,button{
+    transition:none
+  }
+}
+@media(min-width:951px){
+  .ctrl-pill,.action-btn,.btn-practice-weak,.tab-btn{
+    font-size:12px
+  }
+  .key{
+    font-size:12px;
+    min-height:38px
+  }
+  .net-speed-card{
+    padding-block:15px
+  }
+  .telemetry-header,.keyboard-header-strip{
+    padding-block:6px
+  }
+  .hero-sub{
+    margin-top:18px
+  }
+  .card-options .option-text strong{
+    font-size:14px
+  }
+  .card-options .option-text small{
+    font-size:11px
+  }
+  .card-header{
+    margin-bottom:12px
+  }
+  .keyboard-board .keyboard-row:last-child{
+    width:55%;
+    align-self:center
+  }
+  .racer-meta span{
+    font-size:11px
+  }
+}
+@media(max-width:560px){
+  .circuit-marker text{
+    font-size:32px
+  }
+  .circuit-top-toggles{
+    z-index:1
+  }
+}

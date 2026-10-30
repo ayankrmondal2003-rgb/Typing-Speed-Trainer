@@ -53,7 +53,7 @@ test('frontend: Home → custom → input/correction → results → stats/chart
   $('#custom-text').value = 'aaa'; await a.start(); assert.equal($('#typing').hidden, false);
   a.key('x'); assert.ok($('#prompt .incorrect')); assert.equal($('#live-mistakes').textContent, '1');
   a.key('Backspace'); a.key('x'); a.key('Backspace'); a.key('a');
-  assert.match($('#live-weak').textContent, /Focus next: a/); assert.ok($('#live-keyboard .key.high'));
+  assert.match($('#live-weak').textContent, /Focus next: a/); assert.ok($('#live-keyboard .key.critical'));
   assert.ok($('#prompt .correct')); assert.equal($('#prompt .current').textContent, 'a');
   a.advance(1000); assert.equal($('#live-time').textContent, '59s');
   a.key('a'); a.key('a'); await a.settle();

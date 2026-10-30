@@ -48,9 +48,9 @@
 
     <!-- Racer View Quick Settings (Matching Image 1 top right) -->
     <div class="racer-header-controls" id="racer-controls" style="display:none">
-      <div class="control-pill">LAYOUT: <select id="racer-layout-select" aria-label="Layout select"><option>QWERTY</option></select></div>
+      <div class="control-pill">KEYS: <select id="racer-layout-select" aria-label="Keyboard mapping"><option>QWERTY</option></select></div>
       <div class="control-pill">THEME: <select id="racer-theme-select" data-theme-select aria-label="Theme select"><option value="neo">NEO YELLOW</option><option value="dark">DARK</option><option value="light">LIGHT</option></select></div>
-      <button id="btn-sound-toggle" class="control-pill btn-sound" type="button">🔈 SOUND: OFF</button>
+      <button aria-pressed="false" id="btn-sound-toggle" class="control-pill btn-sound" type="button">🔈 SOUND: OFF</button>
     </div>
   </header>
 
@@ -68,8 +68,8 @@
         <div class="hero-left">
           <h1 id="home-title">
             TURN YOUR<br>
-            <span class="hero-highlight">TYPING INTO</span><span class="comic-burst" aria-hidden="true">\|/</span><br>
-            PROGRESS
+            TYPING INTO<span class="comic-burst" aria-hidden="true">\|/</span><br>
+            <span class="hero-highlight">PROGRESS</span>
           </h1>
           <p class="hero-sub">Measure. Locate. Improve.</p>
         </div>
@@ -84,7 +84,7 @@
       <!-- 5-Card Configuration Form (Exact match to Image 2) -->
       <form id="session-form" class="arena-config-form" novalidate>
         <!-- Retain original selects for full backward compatibility & test suites -->
-        <div class="sr-only">
+        <div hidden>
           <select id="mode"><option value="test" selected>Race Track</option><option value="practice">Practice Drill</option></select>
           <select id="difficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option><option value="custom">Custom</option></select>
           <select id="duration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="120">120 seconds</option></select>
@@ -115,7 +115,7 @@
                 <span class="radio-custom"></span>
                 <div class="option-text"><strong>Hard</strong><small>Complex words &amp; symbols</small></div>
               </label>
-              <label class="option-pill" data-target="source" data-val="custom">
+              <label class="option-pill" data-target="difficulty" data-val="custom">
                 <input type="radio" name="opt-difficulty" value="custom">
                 <span class="radio-custom"></span>
                 <div class="option-text"><strong>Custom</strong><small>Type your own text</small></div>
@@ -281,7 +281,7 @@
         <div class="race-track circuit-track">
           <svg class="circuit circuit-f1" viewBox="0 0 1400 360" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <path id="circuit-route" d="M 20 120 C 120 270 240 280 400 280 L 780 280 C 940 280 1020 125 1160 125 C 1280 125 1370 230 1420 310"/>
+              <path id="circuit-route" d="M 84 92 C 174 240 250 265 420 265 L 740 265 C 914 265 984 119 1120 119 S 1295 193 1320 270"/>
               <pattern id="checkers" width="20" height="20" patternUnits="userSpaceOnUse">
                 <rect width="20" height="20" fill="#ffffff"/>
                 <path d="M0 0h10v10H0zM10 10h10v10H10z" fill="#151618"/>
@@ -297,7 +297,9 @@
             </defs>
 
             <!-- Grass backdrop -->
-            <rect width="1400" height="360" fill="#4d8655"/>
+            <rect width="1400" height="360" fill="#376948"/>
+            <path d="M165 0h1000l-60 42H265z" fill="#3a3e46" stroke="#16181e" stroke-width="5"/>
+            <path d="M200 8h925M222 17h890M245 26h854" stroke="#727278" stroke-width="4"/>
             <!-- Dirt run-off shoulder -->
             <use href="#circuit-route" fill="none" stroke="#ba9e6e" stroke-width="210"/>
             <!-- Curbs -->
@@ -307,14 +309,14 @@
             <use href="#circuit-route" fill="none" stroke="#252930" stroke-width="144"/>
             <!-- White dashed center dividing line -->
             <use href="#circuit-route" fill="none" stroke="#ffffff" stroke-width="4" stroke-dasharray="18 16" opacity="0.85"/>
-            <!-- Checkered Finish Line across track -->
-            <rect x="380" y="208" width="26" height="144" fill="url(#checkers)" stroke="#ffe438" stroke-width="2"/>
-            <!-- Distance Markers along track -->
-            <text x="620" y="240" fill="#ffe438" opacity="0.75" font-family="monospace" font-size="12" font-weight="900">25%</text>
-            <text x="800" y="240" fill="#ffe438" opacity="0.75" font-family="monospace" font-size="12" font-weight="900">50%</text>
-            <text x="1100" y="100" fill="#ffe438" opacity="0.75" font-family="monospace" font-size="12" font-weight="900">75%</text>
-
-            <!-- RACER 1: RED CAR (PLAYER) -->
+            <use href="#circuit-route" fill="none" stroke="#080a0e" stroke-width="110" opacity=".24"/>
+            <use href="#circuit-route" fill="none" stroke="#252930" stroke-width="96"/>
+            <use href="#circuit-route" fill="none" stroke="#fff8dd" stroke-width="3" stroke-dasharray="18 16"/>
+            <g transform="translate(84 92) rotate(59)"><rect x="-9" y="-72" width="18" height="144" fill="url(#checkers)" stroke="#ffe438"/></g>
+            <g transform="translate(1320 270) rotate(72)"><rect x="-9" y="-72" width="18" height="144" fill="url(#checkers)" stroke="#ffe438"/></g>
+            <g class="circuit-marker" data-fraction="0.25"><path d="M0 -40v80" stroke="#a5a8b4" stroke-width="2" stroke-dasharray="4 5"/><text x="6" y="-16" fill="#fff4b3" font-size="19" font-family="monospace">25%</text></g>
+<g class="circuit-marker" data-fraction="0.5"><path d="M0 -40v80" stroke="#a5a8b4" stroke-width="2" stroke-dasharray="4 5"/><text x="6" y="-16" fill="#fff4b3" font-size="19" font-family="monospace">50%</text></g>
+<g class="circuit-marker" data-fraction="0.75"><path d="M0 -40v80" stroke="#a5a8b4" stroke-width="2" stroke-dasharray="4 5"/><text x="6" y="-16" fill="#fff4b3" font-size="19" font-family="monospace">75%</text></g>
             <g id="racer" class="circuit-racer" transform="translate(100 262) rotate(0)">
               <path class="exhaust-flame" d="M -24 -2 Q -38 0 -48 0 Q -38 0 -24 2 Z" fill="#ff4d00" filter="url(#flame-glow)"/>
               <path class="exhaust-flame" d="M -22 -1 Q -32 0 -40 0 Q -32 0 -22 1 Z" fill="#ffe438"/>
@@ -325,7 +327,9 @@
               <rect x="-24" y="-13" width="52" height="26" rx="6" fill="#e53935" stroke="#111" stroke-width="2.5"/>
               <rect x="-4" y="-9" width="18" height="18" rx="4" fill="#181a1f" stroke="#ffe438" stroke-width="1.5"/>
               <path d="M-22 -11h6v22h-6z" fill="#ffe438"/>
-              <path d="M16 -8l10 3v10l-10 3z" fill="#111"/>
+              <path d="M16 -8l9 3v10l-9 3z" fill="#91cbd7" stroke="#111" stroke-width="1.5"/>
+              <path d="M0 -2h12v4H0z" fill="#fff4be"/><path d="M24 -9v4m0 10v4" stroke="#fff4be" stroke-width="3"/>
+              <path d="M-24 -16v32" stroke="#121317" stroke-width="4"/>
               <g transform="translate(-10, -28)">
                 <rect x="-10" y="-14" width="76" height="18" rx="2" fill="#ffe438" stroke="#111" stroke-width="1.5"/>
                 <text x="28" y="-1" fill="#111" font-family="monospace" font-size="10" font-weight="900" text-anchor="middle" id="car-tag-you">YOU: 0 WPM</text>
@@ -333,7 +337,7 @@
             </g>
 
             <!-- RACER 2: CYAN / BLUE CAR (GHOST OR OPPONENT) -->
-            <g id="racer-p2" class="circuit-racer" transform="translate(80 298) rotate(0)">
+            <g id="racer-p2" style="display:none" class="circuit-racer" transform="translate(80 298) rotate(0)">
               <path class="exhaust-flame" d="M -24 -2 Q -38 0 -48 0 Q -38 0 -24 2 Z" fill="#00b4d8" filter="url(#flame-glow)"/>
               <path class="exhaust-flame" d="M -22 -1 Q -32 0 -40 0 Q -32 0 -22 1 Z" fill="#90e0ef"/>
               <rect x="-18" y="-18" width="12" height="7" rx="2" fill="#0d0e10"/>
@@ -422,7 +426,7 @@
               <div class="racer-meta">
                 <span class="color-dot dot-cyan"></span>
                 <div>
-                  <strong id="opponent-name-label">GHOST PB (#00)</strong>
+                  <strong id="opponent-name-label">PERSONAL BEST GHOST</strong>
                   <span id="ghost-percent-label">0% Done</span>
                 </div>
               </div>
@@ -448,8 +452,8 @@
             <div class="actions-group">
               <button type="button" class="action-btn" id="btn-custom-passage">✏️ CUSTOM PASSAGE</button>
               <button type="button" class="action-btn" id="btn-new-prompt">🔄 NEW PROMPT</button>
-              <button type="button" class="action-btn btn-restart-highlight" id="restart">⚡ RESTART [ENTER]</button>
-              <button type="button" class="sr-only" id="end-test">End Test</button>
+              <button type="button" class="action-btn btn-restart-highlight" id="restart">⚡ RESTART</button>
+              <button type="button" class="action-btn" id="end-test">End Test</button>
             </div>
           </div>
 
@@ -459,7 +463,7 @@
             <div class="crt-monitor-panel">
               <div class="crt-screen">
                 <p id="prompt" class="passage" aria-label="Typing passage"></p>
-                <textarea id="typing-input" rows="1" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" aria-describedby="input-help"></textarea>
+                <textarea id="typing-input" aria-label="Type the passage" rows="1" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" aria-describedby="input-help"></textarea>
                 <p id="input-help" class="sr-only">Backspace to correct. Enter for a new line. Paste is disabled during a test.</p>
               </div>
               <div class="passage-footer">
@@ -492,8 +496,8 @@
                 <div class="legend">
                   <span><i></i> UNTESTED</span>
                   <span><i class="low"></i> &lt;5% ERR</span>
-                  <span><i class="mid"></i> 5–10%</span>
-                  <span><i class="high"></i> 15–30%</span>
+                  <span><i class="mid"></i> 5–15%</span>
+                  <span><i class="high"></i> &gt;15–50%</span>
                   <span><i class="critical"></i> &gt;50% ERR</span>
                 </div>
               </div>
@@ -524,7 +528,7 @@
         <div id="mp-setup-view" class="mp-setup-grid">
           <div class="mp-card">
             <h3>CREATE A RACE</h3>
-            <p class="muted">Start a race room and share your ID or invite link with a rival.</p>
+            <p class="muted">Local tab racing. Open the invite in another tab of this browser, on the same device and site.</p>
             <label>Your Nickname<input type="text" id="host-nickname" maxlength="15" value="SpeedRacer"></label>
             <label>Difficulty
               <select id="mp-difficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select>
