@@ -20,30 +20,27 @@ async function createApp(t) {
   return { w, $, settle, navigate, click };
 }
 
-test('branding: title, brandmark, SVG circuit, and footer display Type e', async t => {
+test('branding: title, brandmark, and footer display Type e', async t => {
   const { w, $ } = await createApp(t);
   assert.match(w.document.title, /^Type e /);
-  assert.equal($('.brand span:last-child').childNodes[0].textContent.trim(), 'Type e');
-  assert.equal($('.brand-mark').textContent.trim(), 'e');
-  assert.match($('.circuit text').textContent, /TYPE E MOTOR CIRCUIT/);
-  assert.match($('footer span:first-child').textContent, /TYPE E /);
+  assert.ok($('.brand-box'));
+  assert.match($('.brand-box').textContent, /Type!e/);
+  assert.match($('footer').textContent, /Accuracy first/);
 });
 
-test('flow layout: single-page no-scroll container and grid structure exist in #typing', async t => {
+test('flow layout: single-page no-scroll dashboard and CRT/heatmap workspace exist in #typing', async t => {
   const { w, $, settle } = await createApp(t);
   $('#mode').value = 'test';
   $('#session-form').dispatchEvent(new w.Event('submit', { cancelable: true }));
   await settle();
 
   assert.equal($('#typing').hidden, false);
-  assert.ok($('.flow-topbar'));
-  assert.ok($('.flow-grid'));
-  assert.ok($('.flow-col-typing'));
-  assert.ok($('.flow-col-visuals'));
+  assert.ok($('.racer-dashboard'));
+  assert.ok($('.dash-col-telemetry'));
+  assert.ok($('.crt-monitor-panel'));
+  assert.ok($('.heatmap-keyboard-panel'));
   assert.ok($('#racer'));
   assert.ok($('#racer-p2'));
-  assert.ok($('#racer-p3'));
-  assert.ok($('#racer-p4'));
 });
 
 test('multiplayer: create room, share ID, join room, and lobby state', async t => {

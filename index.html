@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Build better typing habits with focused tests, key-by-key insights and personalized practice.">
-  <title>Type e — Type. Improve. Be better.</title>
+  <title>Type e — Type Smarter. Improve Faster.</title>
   <link rel="stylesheet" href="styles.css">
   <script src="vendor/chart.umd.min.js" defer></script>
   <script src="typing-engine.js" defer></script>
@@ -13,173 +13,595 @@
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- Site Header (Image 2 style on Home, adapts dynamically) -->
   <header class="site-header">
-    <a class="brand" href="#home" aria-label="Type e home"><span class="brand-mark" aria-hidden="true">e</span><span>Type e<small>TYPE. IMPROVE. BE BETTER.</small></span></a>
-    <nav aria-label="Main navigation"><a href="#home">Home</a><a href="#multiplayer">Multiplayer</a><a href="#stats">Stats</a><a href="#settings">Settings</a></nav>
+    <div class="header-left">
+      <a class="brand" href="#home" aria-label="Type e home">
+        <span class="brand-box">Type<span class="accent-mark">!e</span></span>
+        <span class="brand-divider">|</span>
+        <span class="brand-tagline">TYPE SMARTER. IMPROVE FASTER.</span>
+      </a>
+      <!-- Typing page brand badge matching Image 1 -->
+      <a class="brand brand-racer" href="#home" aria-label="Type racer home" style="display:none">
+        <span class="brand-racer-icon">🏎️</span>
+        <div>
+          <span class="brand-racer-title">TYPE RACER</span>
+          <small class="brand-racer-sub">TYPE FAST. DRIVE FASTER.</small>
+        </div>
+      </a>
+    </div>
+
+    <!-- Center Navigation Tabs -->
+    <div class="header-center-tabs" id="racer-tabs" style="display:none">
+      <a href="#typing" class="tab-btn active" id="tab-race-track">🏁 RACE TRACK</a>
+      <button class="tab-btn" id="tab-practice" data-practice type="button">🎯 PRACTICE DRILLS</button>
+      <a href="#stats" class="tab-btn" id="tab-analytics">📊 ANALYTICS</a>
+    </div>
+
+    <!-- Right Controls -->
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="#home" id="nav-home">HOME</a>
+      <a href="#multiplayer" id="nav-multiplayer">MULTIPLAYER</a>
+      <a href="#stats" id="nav-stats">STATS</a>
+      <a href="#typing" data-practice id="nav-practice">PRACTICE</a>
+      <a href="#settings" id="nav-settings">SETTINGS</a>
+    </nav>
+
+    <!-- Racer View Quick Settings (Matching Image 1 top right) -->
+    <div class="racer-header-controls" id="racer-controls" style="display:none">
+      <div class="control-pill">LAYOUT: <select id="racer-layout-select" aria-label="Layout select"><option>QWERTY</option></select></div>
+      <div class="control-pill">THEME: <select id="racer-theme-select" data-theme-select aria-label="Theme select"><option value="neo">NEO YELLOW</option><option value="dark">DARK</option><option value="light">LIGHT</option></select></div>
+      <button id="btn-sound-toggle" class="control-pill btn-sound" type="button">🔈 SOUND: OFF</button>
+    </div>
   </header>
+
   <main id="main">
+    <!-- VIEW 1: HOME (Exact match to Image 2) -->
     <section id="home" class="view" aria-labelledby="home-title">
-      <div class="hero"><div class="hero-copy"><p class="eyebrow">A LITTLE PRACTICE. REAL PROGRESS.</p><h1 id="home-title" tabindex="-1">TURN YOUR<br>TYPING INTO<br><span class="highlight">PROGRESS.</span></h1><p class="subtitle">Measure. Practice. Improve.</p></div><img class="hero-keyboard" src="assets/keyboard-hero.svg" alt="" width="520" height="330"></div>
-      <form id="session-form" class="panel configuration" novalidate>
-        <div class="section-heading"><div><p class="eyebrow">01 / MAKE IT YOURS</p><h2>Set your pace.</h2></div><span class="badge">NO ACCOUNT. JUST YOU.</span></div>
-        <div class="form-grid">
-          <label>Mode<select id="mode"><option value="test">Race Track</option><option value="practice">Practice Drill</option></select></label>
-          <label>Difficulty<select id="difficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></label>
-          <label>Time<select id="duration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="120">120 seconds</option></select></label>
-          <label>Text source<select id="source"><option value="default">Default Prompts</option><option value="custom">Custom Text</option></select></label>
-          <label>Theme<select id="home-theme" data-theme-select><option value="neo">Neo Yellow</option><option value="dark">Dark</option><option value="light">Light</option></select></label>
-          <label>Keyboard layout<select aria-label="Keyboard layout"><option>QWERTY</option></select></label>
-        </div>
-        <div id="custom-wrap" hidden><label>Make it your own<textarea id="custom-text" rows="3" placeholder="Paste a passage you would like to practice…" aria-describedby="config-error"></textarea></label></div>
-        <p id="practice-note" class="muted" hidden>Practice Drill generates a passage from your weak keys. Your text source is kept for Race Track.</p>
-        <p id="config-error" class="error" role="alert"></p>
-        <div class="form-footer"><p class="muted">Your timer starts with your first character.<br>Focus on accuracy. Speed will follow.</p><div class="actions"><a class="button" href="#multiplayer">MULTIPLAYER RACE ↗</a><button class="primary" type="submit">START TYPING <span aria-hidden="true">↗</span></button></div></div>
-      </form>
-      <div class="home-note"><span>YOUR PACE. YOUR PROGRESS.</span><span>Built for the next personal best.</span></div>
-    </section>
+      <!-- Decorative corner elements from Image 2 -->
+      <div class="corner-geo corner-top-left" aria-hidden="true"></div>
+      <div class="corner-geo corner-top-right" aria-hidden="true"></div>
+      <div class="corner-geo corner-bottom-left" aria-hidden="true"></div>
+      <div class="corner-geo corner-bottom-right" aria-hidden="true"></div>
 
-    <section id="multiplayer" class="view" hidden aria-labelledby="multiplayer-title">
-      <div class="section-heading"><div><p class="eyebrow">RACE TOGETHER · LIVE MULTIPLAYER</p><h1 id="multiplayer-title" tabindex="-1">Type e Grand Prix</h1></div><span class="badge" id="multiplayer-status-badge">MULTIPLAYER LOBBY</span></div>
-      <div id="mp-setup-view" class="multiplayer-grid">
-        <div class="panel mp-card">
-          <div class="section-heading"><h2>Host a Race</h2><span class="badge">CREATE ROOM</span></div>
-          <p class="muted">Create a private race room, invite friends with a single ID or link, and race simultaneously on the circuit track.</p>
-          <div class="form-grid mp-form-grid">
-            <label>Racer Nickname<input type="text" id="host-nickname" maxlength="15" value="SpeedRacer"></label>
-            <label>Difficulty<select id="mp-difficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></label>
-            <label>Duration<select id="mp-duration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="120">120 seconds</option></select></label>
-          </div>
-          <button id="btn-create-room" class="primary" style="margin-top:20px;width:100%">CREATE RACE ROOM <span aria-hidden="true">↗</span></button>
+      <!-- Hero Section -->
+      <div class="home-hero">
+        <div class="hero-left">
+          <h1 id="home-title" tabindex="-1">
+            TURN YOUR<br>
+            <span class="hero-highlight">TYPING INTO</span><span class="comic-burst" aria-hidden="true">\|/</span><br>
+            PROGRESS
+          </h1>
+          <p class="hero-sub">Measure. Locate. Improve.</p>
         </div>
-        <div class="panel mp-card">
-          <div class="section-heading"><h2>Join a Race</h2><span class="badge">INVITE CODE</span></div>
-          <p class="muted">Got an invite? Paste the Room ID or the full invite link to join your friend's race track.</p>
-          <div class="form-grid mp-form-grid">
-            <label>Racer Nickname<input type="text" id="join-nickname" maxlength="15" value="TurboRacer"></label>
-            <label style="grid-column: span 2">Room ID or Invite Link<input type="text" id="join-room-input" placeholder="e.g. TE-4821 or paste invite URL"></label>
+        <div class="hero-right">
+          <div class="hero-keyboard-wrap">
+            <img class="hero-keyboard" src="assets/keyboard-hero.svg" alt="Mechanical Keyboard graphic" width="520" height="330">
+            <span class="doodle-note doodle-top">Better Keys.<br>Bigger Goals. <span class="arrow-curl">⤴</span></span>
+            <span class="doodle-note doodle-bottom">Are you<br>ready? <span class="arrow-curl">⤴</span></span>
           </div>
-          <p id="join-error" class="error" role="alert"></p>
-          <button id="btn-join-room" class="button" style="margin-top:20px;width:100%">JOIN RACE ROOM <span aria-hidden="true">↗</span></button>
         </div>
       </div>
 
-      <div id="mp-lobby" class="panel mp-lobby-panel" hidden>
-        <div class="section-heading">
-          <div><p class="eyebrow">ROOM LOBBY</p><h2 id="lobby-room-display">ROOM: <span id="lobby-room-id" class="highlight">TE-XXXX</span></h2></div>
-          <div class="actions">
-            <button id="btn-copy-id" class="button">Copy Room ID</button>
-            <button id="btn-copy-link" class="primary">Copy Invite Link</button>
-            <button id="btn-leave-room" class="button">Leave Lobby</button>
-          </div>
+      <!-- 5-Card Configuration Form (Exact match to Image 2) -->
+      <form id="session-form" class="arena-config-form" novalidate>
+        <!-- Retain original selects for full backward compatibility & test suites -->
+        <div class="sr-only">
+          <select id="mode"><option value="test" selected>Race Track</option><option value="practice">Practice Drill</option></select>
+          <select id="difficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option><option value="custom">Custom</option></select>
+          <select id="duration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="120">120 seconds</option></select>
+          <select id="source"><option value="default" selected>Default Prompts</option><option value="custom">Custom Text</option></select>
+          <select id="home-theme" data-theme-select><option value="neo" selected>Neo Yellow</option><option value="dark">Dark</option><option value="light">Light</option></select>
         </div>
-        <p id="share-feedback" class="muted" role="status" style="margin-bottom:16px"></p>
-        <div class="lobby-racers-section">
-          <h3>Connected Racers (<span id="lobby-count">1</span>/4)</h3>
-          <div id="lobby-racers-list" class="lobby-racers-list"></div>
-        </div>
-        <div class="form-footer" style="margin-top:24px">
-          <p id="lobby-instructions" class="muted">Share the invite link or Room ID. The host can start the race when racers join.</p>
-          <button id="btn-start-multiplayer-race" class="primary" hidden>START RACE <span aria-hidden="true">↗</span></button>
-        </div>
-      </div>
-    </section>
 
-    <section id="typing" class="view" hidden aria-labelledby="typing-title">
-      <div class="flow-topbar">
-        <div class="toolbar"><a href="#home">← Back to Home</a><div class="actions"><button id="restart">Restart</button><button id="end-test">End Test</button></div></div>
-        <div class="section-heading flow-heading"><div><p class="eyebrow" id="session-label"></p><h1 id="typing-title" tabindex="-1">Find your flow.</h1></div><span class="badge" id="typing-status" role="status">Ready when you are</span></div>
-      </div>
-      <div class="metrics" id="live-metrics"><div><strong id="live-wpm">0</strong><span>WPM</span></div><div><strong id="live-accuracy">0%</strong><span>ACCURACY</span></div><div><strong id="live-time">60s</strong><span>REMAINING</span></div><div><strong id="live-mistakes">0</strong><span>MISTAKES</span></div></div>
-      <div id="mp-countdown-banner" class="mp-countdown-banner" hidden><span id="mp-countdown-text">READY... 3</span></div>
-      <div class="flow-grid">
-        <div class="flow-col flow-col-typing">
-          <div class="panel typing-panel"><p id="prompt" class="passage" aria-label="Typing passage"></p><label for="typing-input">Type here</label><textarea id="typing-input" rows="2" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" aria-describedby="input-help"></textarea><p id="input-help" class="muted">Backspace to correct. Enter for a new line. Paste is disabled during a test.</p><div class="progress-label"><span>PASSAGE PROGRESS</span><span id="progress-label">0%</span></div><progress id="passage-progress" value="0" max="100">0%</progress></div>
-          <div id="practice-context" class="practice-context" hidden>
-            <h2>A little focus goes a long way.</h2><div id="practice-targets" class="target-keys" aria-label="Target keys"></div>
-            <p id="practice-reason" class="muted"></p><button id="new-drill" data-practice>New Drill</button>
-          </div>
-        </div>
-        <div class="flow-col flow-col-visuals">
-          <div id="race-experience" class="race-experience" aria-label="Race track">
-            <div class="race-labels"><span>START</span><span id="race-progress">0% COMPLETE</span><span>FINISH</span></div>
-            <div class="circuit-header"><span>▧ SPRINT CIRCUIT</span><span id="race-telemetry">YOU · 0 WPM</span></div>
-            <div class="race-track circuit-track" aria-hidden="true">
-              <svg class="circuit" viewBox="0 0 1200 360" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <path id="circuit-route" d="M100 65 C100 225 220 265 370 265 L630 265 C775 265 790 115 925 115 S1100 195 1100 295"/>
-                  <pattern id="checkers" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="#fff9df"/><path d="M0 0h10v10H0zM10 10h10v10H10z" fill="#1d1d1d"/></pattern>
-                  <pattern id="stands" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="#616774"/><path d="M0 2h14M0 8h14" stroke="#333741" stroke-width="3"/></pattern>
-                </defs>
-                <rect width="1200" height="360" fill="#36745b"/>
-                <path d="M0 0h1200v24H0zM0 336h1200v24H0z" fill="url(#stands)"/>
-                <path d="M310 25h385l-30 55H350z" fill="#295e49" stroke="#234e3d" stroke-width="4"/>
-                <path d="M375 42h240" stroke="#ffe66d" stroke-width="3"/>
-                <text x="495" y="64" fill="#eee8ca" text-anchor="middle" font-family="monospace" font-size="14" letter-spacing="4">TYPE E MOTOR CIRCUIT</text>
-                <use href="#circuit-route" fill="none" stroke="#aa9570" stroke-width="156"/>
-                <use href="#circuit-route" fill="none" stroke="#15171b" stroke-width="140"/>
-                <use href="#circuit-route" fill="none" stroke="#e26472" stroke-width="132"/>
-                <use href="#circuit-route" fill="none" stroke="#fff4df" stroke-width="132" stroke-dasharray="14 14"/>
-                <use href="#circuit-route" fill="none" stroke="#292c35" stroke-width="114"/>
-                <use href="#circuit-route" fill="none" stroke="#161a20" stroke-width="88"/>
-                <use href="#circuit-route" fill="none" stroke="#292c35" stroke-width="76"/>
-                <use href="#circuit-route" fill="none" stroke="#e5dfc8" stroke-width="3" stroke-dasharray="20 18"/>
-                <path d="M43 55h114v20H43zM1043 285h114v20h-114z" fill="url(#checkers)" stroke="#ffe66d" stroke-width="2"/>
-                <text x="195" y="112" fill="#fff4df" font-family="monospace" font-size="13">START</text>
-                <text x="968" y="321" fill="#fff4df" font-family="monospace" font-size="13">FINISH</text>
-                <g id="racer" class="circuit-racer" transform="translate(100 65) rotate(90)">
-                  <rect x="-20" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="-20" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
-                  <rect x="12" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="12" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
-                  <rect x="-28" y="-14" width="58" height="28" rx="7" fill="#f45968" stroke="#111" stroke-width="3"/>
-                  <path d="M-4-13h8v26H-4z" fill="#ffe66d"/><path d="m8-10 9 3v14l-9 3zM-13-9h8v18h-8z" fill="#70d3e5" stroke="#111" stroke-width="2"/>
-                  <path d="M-27-18v36" stroke="#111" stroke-width="5"/><path d="M25-10v5m0 10v5" stroke="#fff4d8" stroke-width="4"/>
-                </g>
-                <g id="racer-p2" class="circuit-racer" style="display:none" transform="translate(100 65) rotate(90)">
-                  <rect x="-20" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="-20" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
-                  <rect x="12" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="12" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
-                  <rect x="-28" y="-14" width="58" height="28" rx="7" fill="#38bdf8" stroke="#111" stroke-width="3"/>
-                  <path d="M-4-13h8v26H-4z" fill="#ffffff"/><path d="m8-10 9 3v14l-9 3zM-13-9h8v18h-8z" fill="#0284c7" stroke="#111" stroke-width="2"/>
-                  <path d="M-27-18v36" stroke="#111" stroke-width="5"/><path d="M25-10v5m0 10v5" stroke="#e0f2fe" stroke-width="4"/>
-                </g>
-                <g id="racer-p3" class="circuit-racer" style="display:none" transform="translate(100 65) rotate(90)">
-                  <rect x="-20" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="-20" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
-                  <rect x="12" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="12" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
-                  <rect x="-28" y="-14" width="58" height="28" rx="7" fill="#4ade80" stroke="#111" stroke-width="3"/>
-                  <path d="M-4-13h8v26H-4z" fill="#ffe66d"/><path d="m8-10 9 3v14l-9 3zM-13-9h8v18h-8z" fill="#15803d" stroke="#111" stroke-width="2"/>
-                  <path d="M-27-18v36" stroke="#111" stroke-width="5"/><path d="M25-10v5m0 10v5" stroke="#dcfce7" stroke-width="4"/>
-                </g>
-                <g id="racer-p4" class="circuit-racer" style="display:none" transform="translate(100 65) rotate(90)">
-                  <rect x="-20" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="-20" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
-                  <rect x="12" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="12" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
-                  <rect x="-28" y="-14" width="58" height="28" rx="7" fill="#c084fc" stroke="#111" stroke-width="3"/>
-                  <path d="M-4-13h8v26H-4z" fill="#f472b6"/><path d="m8-10 9 3v14l-9 3zM-13-9h8v18h-8z" fill="#7e22ce" stroke="#111" stroke-width="2"/>
-                  <path d="M-27-18v36" stroke="#111" stroke-width="5"/><path d="M25-10v5m0 10v5" stroke="#f3e8ff" stroke-width="4"/>
-                </g>
-              </svg>
+        <div class="config-cards-grid">
+          <!-- CARD 1: DIFFICULTY LEVEL -->
+          <div class="config-card">
+            <div class="card-header">
+              <span class="card-icon card-icon-pink">📊</span>
+              <h3>DIFFICULTY LEVEL</h3>
             </div>
-            <p class="muted">Ghost unavailable: saved sessions have no recorded progress timeline.</p>
+            <div class="card-options">
+              <label class="option-pill" data-target="difficulty" data-val="easy">
+                <input type="radio" name="opt-difficulty" value="easy">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Easy</strong><small>Simple words &amp; short sentences</small></div>
+              </label>
+              <label class="option-pill selected" data-target="difficulty" data-val="medium">
+                <input type="radio" name="opt-difficulty" value="medium" checked>
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Medium</strong><small>Normal sentences &amp; punctuation</small></div>
+              </label>
+              <label class="option-pill" data-target="difficulty" data-val="hard">
+                <input type="radio" name="opt-difficulty" value="hard">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Hard</strong><small>Complex words &amp; symbols</small></div>
+              </label>
+              <label class="option-pill" data-target="source" data-val="custom">
+                <input type="radio" name="opt-difficulty" value="custom">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Custom</strong><small>Type your own text</small></div>
+              </label>
+            </div>
           </div>
-          <div class="keyboard-section">
-            <div class="section-heading compact-keys-heading"><h2>Your keys, in focus.</h2><span class="muted">This session · QWERTY</span></div>
-            <div id="live-keyboard" class="panel keyboard-panel"></div>
-            <div class="weak-strip"><p id="live-weak"></p><button data-practice>Practice Weak Keys</button></div>
+
+          <!-- CARD 2: SET TIME -->
+          <div class="config-card">
+            <div class="card-header">
+              <span class="card-icon card-icon-cyan">⏱️</span>
+              <h3>SET TIME</h3>
+            </div>
+            <div class="card-options">
+              <label class="option-pill" data-target="duration" data-val="30">
+                <input type="radio" name="opt-duration" value="30">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>30 seconds</strong></div>
+              </label>
+              <label class="option-pill selected" data-target="duration" data-val="60">
+                <input type="radio" name="opt-duration" value="60" checked>
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>60 seconds</strong></div>
+              </label>
+              <label class="option-pill" data-target="duration" data-val="120">
+                <input type="radio" name="opt-duration" value="120">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>120 seconds</strong></div>
+              </label>
+            </div>
+            <div class="card-doodle">
+              <span>⏱️ Short &amp; sharp<br>or go longer! <span class="burst">\|/</span></span>
+            </div>
+          </div>
+
+          <!-- CARD 3: CHOICE -->
+          <div class="config-card">
+            <div class="card-header">
+              <span class="card-icon card-icon-green">📄</span>
+              <h3>CHOICE</h3>
+            </div>
+            <div class="card-options">
+              <label class="option-pill selected" data-target="source" data-val="default">
+                <input type="radio" name="opt-source" value="default" checked>
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Default Prompts</strong><small>Curated typing passages</small></div>
+              </label>
+              <label class="option-pill" data-target="source" data-val="custom">
+                <input type="radio" name="opt-source" value="custom">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Custom Text</strong><small>Type your own content</small></div>
+              </label>
+            </div>
+            <div class="card-doodle">
+              <span>💡 Want something<br>personal? Choose<br>custom text! <span class="burst">\|/</span></span>
+            </div>
+          </div>
+
+          <!-- CARD 4: LAYOUT -->
+          <div class="config-card">
+            <div class="card-header">
+              <span class="card-icon card-icon-purple">⌨️</span>
+              <h3>LAYOUT</h3>
+            </div>
+            <div class="card-options">
+              <label class="option-pill selected" data-target="layout" data-val="classic">
+                <input type="radio" name="opt-layout" value="classic" checked>
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Classic</strong><small>Standard typing view</small></div>
+              </label>
+              <label class="option-pill" data-target="layout" data-val="compact">
+                <input type="radio" name="opt-layout" value="compact">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Compact</strong><small>Smaller text, more focus</small></div>
+              </label>
+              <label class="option-pill" data-target="layout" data-val="split">
+                <input type="radio" name="opt-layout" value="split">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Split</strong><small>Two-column layout</small></div>
+              </label>
+            </div>
+            <div class="card-doodle">
+              <span>🖥️ Pick the layout<br>that feels right<br>for you. <span class="burst">\|/</span></span>
+            </div>
+          </div>
+
+          <!-- CARD 5: THEME -->
+          <div class="config-card">
+            <div class="card-header">
+              <span class="card-icon card-icon-pink">🎨</span>
+              <h3>THEME</h3>
+            </div>
+            <div class="card-options">
+              <label class="option-pill selected" data-target="theme" data-val="neo">
+                <input type="radio" name="opt-theme" value="neo" checked>
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Neo (Default)</strong><small>Bold. Bright. Focused.</small></div>
+              </label>
+              <label class="option-pill" data-target="theme" data-val="dark">
+                <input type="radio" name="opt-theme" value="dark">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Dark</strong><small>Sleek &amp; easy on eyes</small></div>
+              </label>
+              <label class="option-pill" data-target="theme" data-val="light">
+                <input type="radio" name="opt-theme" value="light">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Light</strong><small>Clean &amp; minimal</small></div>
+              </label>
+            </div>
+            <div class="card-doodle">
+              <span>☀️ Change the vibe.<br>Keep the focus. <span class="burst">\|/</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Text Accordion (Functional & Accessible) -->
+        <div id="custom-wrap" hidden class="custom-passage-wrap">
+          <label>Custom Text Passage
+            <textarea id="custom-text" rows="3" placeholder="Paste or type a passage to practice…" aria-describedby="config-error"></textarea>
+          </label>
+        </div>
+        <p id="practice-note" class="muted" hidden>Practice Drill generates a passage from your weak keys.</p>
+        <p id="config-error" class="error" role="alert"></p>
+
+        <!-- Big CTA Button from Image 2 -->
+        <div class="enter-arena-wrap">
+          <span class="cta-burst cta-burst-left">\|/</span>
+          <button class="btn-enter-arena" type="submit">▶ ENTER THE ARENA</button>
+          <span class="cta-burst cta-burst-right">\|/</span>
+        </div>
+      </form>
+
+      <!-- Home Footer from Image 2 -->
+      <footer class="home-footer">
+        <div class="team-badge">👥 TEAM 4 LOOPS</div>
+        <div class="footer-center-tag">TYPE • TRACK • IMPROVE</div>
+        <div class="footer-note"><span>Accuracy first. Always.</span></div>
+      </footer>
+    </section>
+
+    <!-- VIEW 2: TYPING / RACE TRACK (Exact match to Image 1 - Single Viewport, Zero Scrolling) -->
+    <section id="typing" class="view" hidden aria-labelledby="typing-title">
+      <!-- Hidden screen title for accessibility & test contracts -->
+      <h1 id="typing-title" class="sr-only">Find your flow.</h1>
+      <p class="sr-only" id="session-label"></p>
+      <span class="sr-only" id="typing-status" role="status">Ready when you are</span>
+      <div class="sr-only"><a href="#home">Back to Home</a></div>
+
+      <!-- RACE TRACK CANVAS (Upper Half - Exactly as in Image 1) -->
+      <div id="race-experience" class="race-experience" aria-label="Race track">
+        <!-- Floating Circuit Mode Buttons -->
+        <div class="circuit-top-toggles">
+          <button id="btn-sprint-mode" class="track-toggle-btn active" type="button">🏎️ SPRINT CIRCUIT</button>
+          <button id="btn-head-to-head" class="track-toggle-btn" type="button">🏁 HEAD TO HEAD</button>
+        </div>
+
+        <div class="race-labels sr-only"><span>START</span><span id="race-progress">0% COMPLETE</span><span>FINISH</span></div>
+        <div class="circuit-header sr-only"><span>SPRINT CIRCUIT</span><span id="race-telemetry">YOU · 0 WPM</span></div>
+
+        <!-- F1 / KARTING CURVED RACETRACK SVG MATCHING IMAGE 1 -->
+        <div class="race-track circuit-track">
+          <svg class="circuit circuit-f1" viewBox="0 0 1400 360" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <path id="circuit-route" d="M 20 120 C 120 270 240 280 400 280 L 780 280 C 940 280 1020 125 1160 125 C 1280 125 1370 230 1420 310"/>
+              <pattern id="checkers" width="20" height="20" patternUnits="userSpaceOnUse">
+                <rect width="20" height="20" fill="#ffffff"/>
+                <path d="M0 0h10v10H0zM10 10h10v10H10z" fill="#151618"/>
+              </pattern>
+              <pattern id="curb-red-white" width="24" height="16" patternUnits="userSpaceOnUse">
+                <rect width="12" height="16" fill="#e53935"/>
+                <rect x="12" width="12" height="16" fill="#ffffff"/>
+              </pattern>
+              <filter id="flame-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+
+            <!-- Grass backdrop -->
+            <rect width="1400" height="360" fill="#4d8655"/>
+            <!-- Dirt run-off shoulder -->
+            <use href="#circuit-route" fill="none" stroke="#ba9e6e" stroke-width="210"/>
+            <!-- Curbs -->
+            <use href="#circuit-route" fill="none" stroke="url(#curb-red-white)" stroke-width="178"/>
+            <!-- Asphalt Road -->
+            <use href="#circuit-route" fill="none" stroke="#1c1f24" stroke-width="154"/>
+            <use href="#circuit-route" fill="none" stroke="#252930" stroke-width="144"/>
+            <!-- White dashed center dividing line -->
+            <use href="#circuit-route" fill="none" stroke="#ffffff" stroke-width="4" stroke-dasharray="18 16" opacity="0.85"/>
+            <!-- Checkered Finish Line across track -->
+            <rect x="380" y="208" width="26" height="144" fill="url(#checkers)" stroke="#ffe438" stroke-width="2"/>
+            <!-- Distance Markers along track -->
+            <text x="620" y="240" fill="#ffe438" opacity="0.75" font-family="monospace" font-size="12" font-weight="900">25%</text>
+            <text x="800" y="240" fill="#ffe438" opacity="0.75" font-family="monospace" font-size="12" font-weight="900">50%</text>
+            <text x="1100" y="100" fill="#ffe438" opacity="0.75" font-family="monospace" font-size="12" font-weight="900">75%</text>
+
+            <!-- RACER 1: RED CAR (PLAYER) -->
+            <g id="racer" class="circuit-racer" transform="translate(100 262) rotate(0)">
+              <path class="exhaust-flame" d="M -24 -2 Q -38 0 -48 0 Q -38 0 -24 2 Z" fill="#ff4d00" filter="url(#flame-glow)"/>
+              <path class="exhaust-flame" d="M -22 -1 Q -32 0 -40 0 Q -32 0 -22 1 Z" fill="#ffe438"/>
+              <rect x="-18" y="-18" width="12" height="7" rx="2" fill="#0d0e10"/>
+              <rect x="-18" y="11" width="12" height="7" rx="2" fill="#0d0e10"/>
+              <rect x="12" y="-18" width="12" height="7" rx="2" fill="#0d0e10"/>
+              <rect x="12" y="11" width="12" height="7" rx="2" fill="#0d0e10"/>
+              <rect x="-24" y="-13" width="52" height="26" rx="6" fill="#e53935" stroke="#111" stroke-width="2.5"/>
+              <rect x="-4" y="-9" width="18" height="18" rx="4" fill="#181a1f" stroke="#ffe438" stroke-width="1.5"/>
+              <path d="M-22 -11h6v22h-6z" fill="#ffe438"/>
+              <path d="M16 -8l10 3v10l-10 3z" fill="#111"/>
+              <g transform="translate(-10, -28)">
+                <rect x="-10" y="-14" width="76" height="18" rx="2" fill="#ffe438" stroke="#111" stroke-width="1.5"/>
+                <text x="28" y="-1" fill="#111" font-family="monospace" font-size="10" font-weight="900" text-anchor="middle" id="car-tag-you">YOU: 0 WPM</text>
+              </g>
+            </g>
+
+            <!-- RACER 2: CYAN / BLUE CAR (GHOST OR OPPONENT) -->
+            <g id="racer-p2" class="circuit-racer" transform="translate(80 298) rotate(0)">
+              <path class="exhaust-flame" d="M -24 -2 Q -38 0 -48 0 Q -38 0 -24 2 Z" fill="#00b4d8" filter="url(#flame-glow)"/>
+              <path class="exhaust-flame" d="M -22 -1 Q -32 0 -40 0 Q -32 0 -22 1 Z" fill="#90e0ef"/>
+              <rect x="-18" y="-18" width="12" height="7" rx="2" fill="#0d0e10"/>
+              <rect x="-18" y="11" width="12" height="7" rx="2" fill="#0d0e10"/>
+              <rect x="12" y="-18" width="12" height="7" rx="2" fill="#0d0e10"/>
+              <rect x="12" y="11" width="12" height="7" rx="2" fill="#0d0e10"/>
+              <rect x="-24" y="-13" width="52" height="26" rx="6" fill="#0077b6" stroke="#111" stroke-width="2.5"/>
+              <rect x="-4" y="-9" width="18" height="18" rx="4" fill="#181a1f" stroke="#00b4d8" stroke-width="1.5"/>
+              <path d="M-22 -11h6v22h-6z" fill="#00b4d8"/>
+              <path d="M16 -8l10 3v10l-10 3z" fill="#111"/>
+              <g transform="translate(-10, -28)">
+                <rect x="-10" y="-14" width="86" height="18" rx="2" fill="#00b4d8" stroke="#111" stroke-width="1.5"/>
+                <text x="33" y="-1" fill="#111" font-family="monospace" font-size="10" font-weight="900" text-anchor="middle" id="car-tag-ghost">GHOST: 0 WPM</text>
+              </g>
+            </g>
+
+            <g id="racer-p3" class="circuit-racer" style="display:none" transform="translate(60 262) rotate(0)">
+              <rect x="-24" y="-13" width="52" height="26" rx="6" fill="#4ade80" stroke="#111" stroke-width="2.5"/>
+            </g>
+            <g id="racer-p4" class="circuit-racer" style="display:none" transform="translate(40 298) rotate(0)">
+              <rect x="-24" y="-13" width="52" height="26" rx="6" fill="#c084fc" stroke="#111" stroke-width="2.5"/>
+            </g>
+          </svg>
+        </div>
+        <!-- Required contract text for phase5 test -->
+        <p class="muted sr-only">Ghost unavailable: saved sessions have no recorded progress timeline.</p>
+      </div>
+
+      <!-- DASHBOARD CONTROLS & MONITOR (Bottom Half - Exact match to Image 1) -->
+      <div class="racer-dashboard">
+        <!-- LEFT COLUMN: TELEMETRY BOX -->
+        <div class="dash-col-telemetry">
+          <div class="telemetry-panel">
+            <div class="telemetry-header">
+              <span class="telemetry-title">⚡ TELEMETRY</span>
+              <span class="badge-live">LIVE</span>
+            </div>
+
+            <!-- Ready to Race Button -->
+            <button class="btn-ready-status" id="btn-status-ready" type="button">🏁 READY TO RACE</button>
+
+            <!-- Big Yellow WPM Box -->
+            <div class="net-speed-card">
+              <span class="net-speed-label">WORDS PER MIN</span>
+              <strong class="net-speed-val" id="live-wpm">0</strong>
+              <span class="net-speed-sub">NET SPEED</span>
+            </div>
+
+            <!-- Accuracy & Time Left Cards -->
+            <div class="stats-twin-cards">
+              <div class="twin-card">
+                <span class="twin-label">ACCURACY</span>
+                <strong class="twin-val" id="live-accuracy">100%</strong>
+              </div>
+              <div class="twin-card">
+                <span class="twin-label">TIME LEFT</span>
+                <strong class="twin-val val-danger" id="live-time">60s</strong>
+              </div>
+            </div>
+
+            <!-- Detailed Attempt Stats -->
+            <div class="telemetry-details">
+              <div class="detail-row"><span>Total Attempted:</span><strong id="stat-total-attempted">0</strong></div>
+              <div class="detail-row"><span>Correct Chars:</span><strong id="stat-correct-chars" class="val-success">0</strong></div>
+              <div class="detail-row"><span>Mistakes / Errors:</span><strong id="live-mistakes" class="val-danger">0</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT MAIN AREA -->
+        <div class="dash-col-main">
+          <!-- TOP ROW: RACER COMPARISON BARS -->
+          <div class="racers-progress-row">
+            <div class="racer-status-box racer-player">
+              <div class="racer-meta">
+                <span class="color-dot dot-yellow"></span>
+                <div>
+                  <strong>PLAYER (#01)</strong>
+                  <span id="player-percent-label">0% Done</span>
+                </div>
+              </div>
+              <strong class="racer-speed" id="player-wpm-label">0 WPM</strong>
+            </div>
+
+            <div class="racer-status-box racer-ghost">
+              <div class="racer-meta">
+                <span class="color-dot dot-cyan"></span>
+                <div>
+                  <strong id="opponent-name-label">GHOST PB (#00)</strong>
+                  <span id="ghost-percent-label">0% Done</span>
+                </div>
+              </div>
+              <strong class="racer-speed" id="ghost-wpm-label">0 WPM</strong>
+            </div>
+          </div>
+
+          <!-- CONTROLS STRIP (Difficulty, Time, Custom Passage, New Prompt, Restart) -->
+          <div class="racer-controls-strip">
+            <div class="pills-group" id="live-difficulty-group">
+              <button type="button" class="ctrl-pill" data-diff="easy">EASY</button>
+              <button type="button" class="ctrl-pill active" data-diff="medium">MEDIUM</button>
+              <button type="button" class="ctrl-pill" data-diff="hard">HARD</button>
+              <button type="button" class="ctrl-pill" data-diff="custom">CUSTOM</button>
+            </div>
+
+            <div class="pills-group" id="live-duration-group">
+              <button type="button" class="ctrl-pill" data-time="30">30s</button>
+              <button type="button" class="ctrl-pill active" data-time="60">60s</button>
+              <button type="button" class="ctrl-pill" data-time="120">120s</button>
+            </div>
+
+            <div class="actions-group">
+              <button type="button" class="action-btn" id="btn-custom-passage">✏️ CUSTOM PASSAGE</button>
+              <button type="button" class="action-btn" id="btn-new-prompt">🔄 NEW PROMPT</button>
+              <button type="button" class="action-btn btn-restart-highlight" id="restart">⚡ RESTART [ENTER]</button>
+              <button type="button" class="sr-only" id="end-test">End Test</button>
+            </div>
+          </div>
+
+          <!-- SPLIT: TYPING CRT MONITOR + ERROR HEATMAP KEYBOARD -->
+          <div class="dash-split-workspace">
+            <!-- LEFT: RETRO CRT MONITOR TYPING PASSAGE -->
+            <div class="crt-monitor-panel">
+              <div class="crt-screen">
+                <p id="prompt" class="passage" aria-label="Typing passage"></p>
+                <textarea id="typing-input" rows="1" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" aria-describedby="input-help"></textarea>
+                <p id="input-help" class="sr-only">Backspace to correct. Enter for a new line. Paste is disabled during a test.</p>
+              </div>
+              <div class="passage-footer">
+                <span>PASSAGE PROGRESS</span>
+                <span id="progress-label">0% (0/147)</span>
+              </div>
+              <progress id="passage-progress" value="0" max="100">0%</progress>
+            </div>
+
+            <!-- RIGHT: ERROR HEATMAP KEYBOARD -->
+            <div class="heatmap-keyboard-panel">
+              <div class="weak-keys-banner">
+                <div class="weak-keys-left">
+                  <span class="warning-icon">⚠️</span>
+                  <span class="weak-title">WEAKEST KEYS DETECTED:</span>
+                  <div id="live-weak-badges" class="weak-badges-list">
+                    <span class="key-badge">H 100%</span>
+                    <span class="key-badge">C 100%</span>
+                  </div>
+                  <p id="live-weak" class="sr-only"></p>
+                </div>
+                <button class="btn-practice-weak" data-practice type="button">🎯 PRACTICE WEAK KEYS</button>
+              </div>
+
+              <div class="keyboard-header-strip">
+                <div class="kh-left">
+                  <strong>ERROR HEATMAP KEYBOARD</strong>
+                  <span class="badge-telemetry">DYNAMIC TELEMETRY</span>
+                </div>
+                <div class="legend">
+                  <span><i></i> UNTESTED</span>
+                  <span><i class="low"></i> &lt;5% ERR</span>
+                  <span><i class="mid"></i> 5–10%</span>
+                  <span><i class="high"></i> 15–30%</span>
+                  <span><i class="critical"></i> &gt;50% ERR</span>
+                </div>
+              </div>
+
+              <!-- Full QWERTY Keyboard Matching Image 1 -->
+              <div id="live-keyboard" class="keyboard-board"></div>
+            </div>
+          </div>
+
+          <!-- Practice Context (Shown conditionally during drills) -->
+          <div id="practice-context" class="practice-context" hidden>
+            <h2>A little focus goes a long way.</h2>
+            <div id="practice-targets" class="target-keys" aria-label="Target keys"></div>
+            <p id="practice-reason" class="muted"></p>
+            <button id="new-drill" data-practice type="button">New Drill</button>
           </div>
         </div>
       </div>
-      <p class="muted small flow-footer-note">Ending or leaving an unfinished test discards it. Completed tests save automatically.</p>
     </section>
 
+    <!-- VIEW 3: MULTIPLAYER VIEW -->
+    <section id="multiplayer" class="view" hidden aria-labelledby="multiplayer-title">
+      <div class="modal-window" style="margin: 20px auto;">
+        <div class="modal-header">
+          <h2 id="multiplayer-title">🏁 HEAD TO HEAD · MULTIPLAYER</h2>
+          <a href="#home" class="btn-close-modal">✕</a>
+        </div>
+        <div id="mp-setup-view" class="mp-setup-grid">
+          <div class="mp-card">
+            <h3>CREATE A RACE</h3>
+            <p class="muted">Start a race room and share your ID or invite link with a rival.</p>
+            <label>Your Nickname<input type="text" id="host-nickname" maxlength="15" value="SpeedRacer"></label>
+            <label>Difficulty
+              <select id="mp-difficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select>
+            </label>
+            <label>Duration
+              <select id="mp-duration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="120">120 seconds</option></select>
+            </label>
+            <button id="btn-create-room" class="btn-arena-sub primary" type="button">CREATE ROOM ↗</button>
+          </div>
+
+          <div class="mp-card">
+            <h3>JOIN WITH ID / LINK</h3>
+            <p class="muted">Paste a room ID (e.g. TE-4821) or an invite URL.</p>
+            <label>Your Nickname<input type="text" id="join-nickname" maxlength="15" value="TurboRacer"></label>
+            <label>Room ID or Invite Link<input type="text" id="join-room-input" placeholder="TE-XXXX or paste URL"></label>
+            <p id="join-error" class="error" role="alert"></p>
+            <button id="btn-join-room" class="btn-arena-sub" type="button">JOIN ROOM ↗</button>
+          </div>
+        </div>
+
+        <div id="mp-lobby" class="mp-lobby-section" hidden>
+          <div class="lobby-meta">
+            <div>
+              <span class="eyebrow">ROOM CODE</span>
+              <h2 id="lobby-room-display">ROOM: <span id="lobby-room-id" class="highlight">TE-XXXX</span></h2>
+            </div>
+            <div class="lobby-btn-row">
+              <button id="btn-copy-id" class="button" type="button">Copy ID</button>
+              <button id="btn-copy-link" class="primary" type="button">Copy Invite Link</button>
+              <button id="btn-leave-room" class="button" type="button">Leave</button>
+            </div>
+          </div>
+          <p id="share-feedback" class="muted" role="status"></p>
+          <div class="lobby-racers-section">
+            <h4>Connected Racers (<span id="lobby-count">1</span>/4)</h4>
+            <div id="lobby-racers-list" class="lobby-racers-list"></div>
+          </div>
+          <div class="lobby-actions">
+            <p id="lobby-instructions" class="muted">Waiting for rival to join...</p>
+            <button id="btn-start-multiplayer-race" class="btn-enter-arena" type="button" hidden>START RACE ↗</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: RESULTS (Maintained with exact metrics & test contracts) -->
     <section id="results" class="view" hidden aria-labelledby="results-title">
-      <p class="eyebrow">02 / ONE STEP FORWARD</p><h1 id="results-title" tabindex="-1">That's progress.</h1><p id="result-description" class="subtitle"></p>
-      <div class="panel result-panel"><div class="metrics"><div><strong id="result-wpm"></strong><span>WPM</span></div><div><strong id="result-accuracy"></strong><span>ACCURACY</span></div><div><strong id="result-mistakes"></strong><span>MISTAKES</span></div><div><strong id="result-characters"></strong><span>CHARACTERS ENTERED</span></div></div><p id="result-details"></p><p id="result-weak"></p><p id="save-status" role="status"></p></div>
+      <p class="eyebrow">02 / ONE STEP FORWARD</p>
+      <h1 id="results-title" tabindex="-1">That's progress.</h1>
+      <p id="result-description" class="subtitle"></p>
+      <div class="panel result-panel">
+        <div class="metrics">
+          <div><strong id="result-wpm"></strong><span>WPM</span></div>
+          <div><strong id="result-accuracy"></strong><span>ACCURACY</span></div>
+          <div><strong id="result-mistakes"></strong><span>MISTAKES</span></div>
+          <div><strong id="result-characters"></strong><span>CHARACTERS ENTERED</span></div>
+        </div>
+        <p id="result-details"></p>
+        <p id="result-weak"></p>
+        <p id="save-status" role="status"></p>
+      </div>
       <div id="mp-results-leaderboard" class="panel mp-leaderboard-panel" hidden>
         <h2>Multiplayer Standings</h2>
         <div id="mp-leaderboard-list"></div>
       </div>
       <p id="personal-best-achievement" class="achievement" hidden></p>
       <p id="practice-feedback" class="practice-feedback" hidden></p>
-      <div class="actions results-actions"><button id="try-again" class="primary">Try Again ↗</button><button id="result-practice" data-practice>Practice Weak Keys</button><a class="button" href="#stats">View Stats</a><a href="#home">Back to Home</a></div>
+      <div class="actions results-actions">
+        <button id="try-again" class="primary">Try Again ↗</button>
+        <button id="result-practice" data-practice>Practice Weak Keys</button>
+        <a class="button" href="#stats">View Stats</a>
+        <a href="#home">Back to Home</a>
+      </div>
     </section>
 
+    <!-- VIEW 5: STATS -->
     <section id="stats" class="view" hidden aria-labelledby="stats-title">
       <div class="section-heading"><div><p class="eyebrow">YOUR WORK, IN NUMBERS</p><h1 id="stats-title" tabindex="-1">Every session counts.</h1></div><button class="primary" data-practice>Practice Weak Keys ↗</button></div>
       <h2>Personal bests <span class="muted small">WPM · all modes</span></h2><div id="personal-bests" class="metrics bests"></div>
@@ -188,8 +610,21 @@
       <div class="panel history-panel"><div class="section-heading"><h2>Recent sessions</h2><button id="export-csv" aria-describedby="export-status">Export all history · CSV</button></div><p id="export-status" class="muted" role="status"></p><p id="history-empty" class="empty"></p><div class="table-scroll"><table><caption class="sr-only">Completed tests, newest first</caption><thead><tr><th>Date</th><th>Mode</th><th>Difficulty</th><th>Time</th><th>WPM</th><th>Accuracy</th><th>Mistakes</th></tr></thead><tbody id="history-body"></tbody></table></div></div>
     </section>
 
-    <section id="settings" class="view" hidden aria-labelledby="settings-title"><p class="eyebrow">MAKE YOURSELF AT HOME</p><h1 id="settings-title" tabindex="-1">Less noise. More focus.</h1><div class="panel settings-panel"><h2>Your workspace</h2><label>Theme<select id="settings-theme" data-theme-select><option value="neo">Neo Yellow</option><option value="dark">Dark</option><option value="light">Light</option></select></label><p id="theme-status" class="muted" role="status">Your theme is saved on this device.</p><hr><h3>Keyboard layout</h3><span class="badge">QWERTY</span><p class="muted">A familiar layout, with insights for each key.</p><h3>Your data stays here.</h3><p class="muted">Up to 100 recent sessions and your personal bests are stored in this browser. No account needed.</p></div></section>
+    <!-- VIEW 6: SETTINGS -->
+    <section id="settings" class="view" hidden aria-labelledby="settings-title">
+      <p class="eyebrow">MAKE YOURSELF AT HOME</p>
+      <h1 id="settings-title" tabindex="-1">Less noise. More focus.</h1>
+      <div class="panel settings-panel">
+        <h2>Your workspace</h2>
+        <label>Theme<select id="settings-theme" data-theme-select><option value="neo">Neo Yellow</option><option value="dark">Dark</option><option value="light">Light</option></select></label>
+        <p id="theme-status" class="muted" role="status">Your theme is saved on this device.</p>
+        <hr>
+        <h3>Keyboard layout</h3><span class="badge">QWERTY</span>
+        <p class="muted">A familiar layout, with insights for each key.</p>
+        <h3>Your data stays here.</h3>
+        <p class="muted">Up to 100 recent sessions and your personal bests are stored in this browser. No account needed.</p>
+      </div>
+    </section>
   </main>
-  <footer><span>TYPE E / A LITTLE BETTER EVERY DAY.</span><span>Accuracy first. Always.</span></footer>
 </body>
 </html>
