@@ -5,10 +5,14 @@
   "description": "Typing Speed Trainer - Hack Day Haldia x GRID community starter",
   "scripts": {
     "start": "node scripts/serve.cjs",
+    "server": "node server.cjs",
     "build": "node scripts/build.cjs",
     "test": "node --test"
   },
   "devDependencies": {
     "jsdom": "^26.1.0"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
   }
 }

@@ -12,25 +12,108 @@ let renderedPrompt = null;
 let renderedInput = null;
 let renderedAttempts = -1;
 let drillContext = null;
-let soundEnabled = false;
 
-// Audio click synthesis for sound toggle
+// Audio & Settings State
+let soundEnabled = false;
+let soundVolume = 0.5;
+let ghostEnabled = true;
+let currentLayout = 'qwerty';
+
+try {
+  soundEnabled = localStorage.getItem('zenith-sound') === 'true';
+  const savedVol = localStorage.getItem('zenith-volume');
+  if (savedVol !== null) soundVolume = Number(savedVol) / 100;
+  ghostEnabled = localStorage.getItem('zenith-ghost') !== 'false';
+  currentLayout = localStorage.getItem('zenith-layout') || 'qwerty';
+} catch {}
+
+// Audio synthesis using Web Audio API
 let audioCtx = null;
+function getAudioContext() {
+  if (typeof window === 'undefined') return null;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  return audioCtx;
+}
+
 function playKeyClick() {
   if (!soundEnabled) return;
   try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(300 + Math.random() * 200, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+    osc.frequency.setValueAtTime(320 + Math.random() * 180, ctx.currentTime);
+    const vol = 0.05 * soundVolume;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
     osc.connect(gain);
-    gain.connect(audioCtx.destination);
+    gain.connect(ctx.destination);
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.04);
+    osc.stop(ctx.currentTime + 0.04);
+  } catch {}
+}
+
+function playErrorBuzz() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(140, ctx.currentTime);
+    const vol = 0.08 * soundVolume;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.12);
+  } catch {}
+}
+
+function playCountdownBeep(high = false) {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(high ? 880 : 440, ctx.currentTime);
+    const vol = 0.12 * soundVolume;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (high ? 0.35 : 0.18));
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + (high ? 0.35 : 0.18));
+  } catch {}
+}
+
+function playFinishFanfare() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.1);
+      const vol = 0.08 * soundVolume;
+      gain.gain.setValueAtTime(vol, ctx.currentTime + idx * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.1 + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.1);
+      osc.stop(ctx.currentTime + idx * 0.1 + 0.28);
+    });
   } catch {}
 }
 
@@ -42,6 +125,7 @@ const multiplayer = {
   isHost: false,
   roomId: null,
   channel: null,
+  wsConnected: false,
   localPlayer: {
     id: 'p_' + Math.random().toString(36).slice(2, 8),
     name: 'SpeedRacer',
@@ -56,12 +140,18 @@ const multiplayer = {
   countdownTimer: null
 };
 
+let wsClient = null;
+
 function stopTimer() { if (timer !== null) clearInterval(timer); timer = null; }
 function resetRendering() { renderedPrompt = null; renderedInput = null; renderedAttempts = -1; composing = false; }
+
 const engine = new Zenith.TypingEngine({ difficulty: 'medium', onComplete: state => {
-  const previousBest = sessionStore.getPersonalBests()[state.duration];
+  const previousBest = sessionStore.getPersonalBests(state.mode)[state.duration];
   sessionStore.saveSession(state);
-  result = { state, saved: true, personalBest: state.wpm > previousBest, drill: drillContext };
+  const ghost = sessionStore.getGhost(state.duration, state.mode);
+  result = { state, saved: true, personalBest: state.wpm > previousBest, drill: drillContext, ghost };
+  playFinishFanfare();
+
   if (multiplayer.active) {
     broadcastMultiplayer({
       type: 'FINISH',
@@ -80,9 +170,10 @@ const engine = new Zenith.TypingEngine({ difficulty: 'medium', onComplete: state
     });
   }
 } });
-const modeName = mode => ({ test: 'Race Track', custom: 'Custom Text', practice: 'Practice Drill' })[mode];
-const keyName = key => key === ' ' ? 'Space' : key === '\n' ? 'Enter' : key;
-const format = number => number.toFixed(1);
+
+const modeName = mode => ({ test: 'Race Track', custom: 'Custom Text', practice: 'Practice Drill', programming: 'Programming' })[mode] || mode;
+const keyName = key => key === ' ' ? 'Space' : key === '\n' ? 'Enter' : key === '\t' ? 'Tab' : key;
+const format = number => (Number(number) || 0).toFixed(1);
 window.typingEngine = engine;
 window.zenith = Object.freeze({ engine, sessionStore, startPractice, historyCsv, multiplayer });
 window.typee = window.zenith;
@@ -95,6 +186,7 @@ function historyCsv() {
   return [['timestamp', ...fields.slice(1)], ...rows.map(row => fields.map(field => row[field]))]
     .map(row => row.map(quote).join(',')).join('\r\n') + '\r\n';
 }
+
 function exportHistory() {
   const csv = historyCsv();
   if (!csv) { $('#export-status').textContent = 'Complete a session before exporting.'; return; }
@@ -111,6 +203,41 @@ function exportHistory() {
   finally { link.remove(); if (url) setTimeout(() => URL.revokeObjectURL(url), 1000); }
 }
 
+function exportJsonBackup() {
+  const json = sessionStore.exportJson();
+  let url;
+  const link = document.createElement('a');
+  try {
+    url = URL.createObjectURL(new Blob([json], { type: 'application/json;charset=utf-8' }));
+    link.href = url;
+    link.download = 'zenith-backup.json';
+    document.body.append(link);
+    link.click();
+    if ($('#backup-status')) $('#backup-status').textContent = 'Backup exported successfully.';
+  } catch {
+    if ($('#backup-status')) $('#backup-status').textContent = 'Backup download unavailable in this browser.';
+  } finally {
+    link.remove();
+    if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
+function handleJsonRestore(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const count = sessionStore.importJson(e.target.result);
+      if ($('#backup-status')) $('#backup-status').textContent = `Restored ${count} new session(s) successfully!`;
+      renderStats();
+    } catch (err) {
+      if ($('#backup-status')) $('#backup-status').textContent = `Import failed: ${err.message}`;
+    }
+  };
+  reader.readAsText(file);
+}
+
 function theme(value, persist = true) {
   const selected = ['neo', 'dark', 'light'].includes(value) ? value : 'neo';
   document.documentElement.dataset.theme = selected;
@@ -122,10 +249,26 @@ function theme(value, persist = true) {
   }
   if (page === 'stats') renderStats();
 }
+
+function setLayout(layout) {
+  currentLayout = ['qwerty', 'dvorak', 'colemak'].includes(layout) ? layout : 'qwerty';
+  const racerSelect = $('#racer-layout-select');
+  if (racerSelect) racerSelect.value = currentLayout;
+  const setSelect = $('#settings-layout');
+  if (setSelect) setSelect.value = currentLayout;
+  try { localStorage.setItem('zenith-layout', currentLayout); } catch {}
+  if (page === 'typing' && activeSession) {
+    renderKeyboard('#live-keyboard', engine.getState().perKey, currentLayout);
+  } else if (page === 'stats') {
+    renderStats();
+  }
+}
+
 function go(destination) {
   if (location.hash === `#${destination}`) route();
   else location.hash = destination;
 }
+
 function route() {
   let hashStr = location.hash.slice(1);
   const qIndex = hashStr.indexOf('?');
@@ -162,23 +305,47 @@ function route() {
 
 function sourceVisibility() {
   const practice = $('#mode').value === 'practice';
+  const programming = $('#source').value === 'programming' || $('#mode').value === 'programming';
   $('#source').disabled = practice;
   $('#custom-wrap').hidden = practice || $('#source').value !== 'custom';
+  const progWrap = $('#programming-wrap');
+  if (progWrap) progWrap.hidden = practice || !programming;
   $('#practice-note').hidden = !practice;
 }
 
-function begin(practice = false) {
+function begin(practice = false, isSymbols = false) {
   const current = activeSession ? engine.getState() : null;
   const records = sessionStore.getHistory();
   if (current && current.status !== 'finished') records.push(current);
   const keyStats = ZenithAnalytics.keyAnalytics(records);
-  const drill = practice ? practiceGenerator.generate(keyStats) : null;
+  let drill = null;
+  if (isSymbols) {
+    drill = practiceGenerator.generateCodeSymbols(keyStats);
+  } else if (practice) {
+    drill = practiceGenerator.generate(keyStats);
+  }
+
+  const isProgramming = !drill && ($('#source').value === 'programming' || $('#mode').value === 'programming');
+  const progLang = $('#programming-language') ? $('#programming-language').value : 'javascript';
+  const progDiff = $('#programming-difficulty') ? $('#programming-difficulty').value : 'intermediate';
+
+  let snippet = null;
+  if (isProgramming) {
+    const provider = typeof ProgrammingSnippets !== 'undefined'
+      ? ProgrammingSnippets
+      : (typeof ZenithProgramming !== 'undefined' ? ZenithProgramming : null);
+    if (provider && typeof provider.getSnippet === 'function') {
+      snippet = provider.getSnippet(progLang, progDiff, Date.now());
+    }
+  }
+
   try {
     engine.configure({
-      difficulty: $('#difficulty').value,
+      difficulty: isProgramming ? progDiff : $('#difficulty').value,
       duration: Number($('#duration').value),
-      customText: drill ? drill.text : $('#source').value === 'custom' ? $('#custom-text').value : null,
-      mode: drill ? 'practice' : $('#source').value === 'custom' ? 'custom' : 'test'
+      customText: drill ? drill.text : isProgramming ? (snippet ? snippet.code : 'const a = 1;') : $('#source').value === 'custom' ? $('#custom-text').value : null,
+      mode: drill ? 'practice' : isProgramming ? 'programming' : $('#source').value === 'custom' ? 'custom' : 'test',
+      language: progLang
     });
     $('#config-error').textContent = '';
     $('#custom-text').removeAttribute('aria-invalid');
@@ -188,6 +355,16 @@ function begin(practice = false) {
     multiplayer.active = false;
     hideMultiplayerCars();
     renderPracticeContext();
+
+    const typingView = $('#typing');
+    if (typingView) {
+      typingView.classList.toggle('code-mode', isProgramming);
+    }
+    const btnSymbols = $('#btn-practice-symbols');
+    if (btnSymbols) {
+      btnSymbols.style.display = isProgramming ? 'inline-block' : 'none';
+    }
+
     resetRendering();
     activeSession = true;
     go('typing');
@@ -199,13 +376,18 @@ function begin(practice = false) {
     return null;
   }
 }
+
 function startPractice() { return begin(true); }
+
 function renderPracticeContext() {
   $('#practice-context').hidden = !drillContext;
   $('#race-experience').hidden = !!drillContext;
   $('#tab-practice').setAttribute('aria-pressed', String(!!drillContext));
   $('#tab-practice').classList.toggle('active', !!drillContext);
-  $('#tab-race-track').classList.toggle('active', !drillContext);
+  $('#tab-race-track').classList.toggle('active', !drillContext && engine.mode !== 'programming');
+  const codeTab = $('#tab-code-mode');
+  if (codeTab) codeTab.classList.toggle('active', !drillContext && engine.mode === 'programming');
+
   $('#typing-title').textContent = drillContext ? 'Build your accuracy.' : 'Find your flow.';
   if (!drillContext) return;
   $('#practice-targets').replaceChildren(...drillContext.targetKeys.map(key => {
@@ -235,8 +417,41 @@ function weakText(rows) {
   return weak.length ? `Focus next: ${weak.map(row => `${keyName(row.key)} (${Math.round(row.errorRate * 100)}% errors)`).join(', ')}` : 'No weak keys recorded yet. Keep typing to build accuracy data.';
 }
 
-// FULL QWERTY ERROR HEATMAP KEYBOARD (MATCHING IMAGE 1)
-function renderKeyboard(target, stats = []) {
+// KEYBOARD LAYOUT DEFINITIONS
+const KEYBOARD_LAYOUTS = {
+  qwerty: {
+    name: 'QWERTY',
+    rows: [
+      ['`','1','2','3','4','5','6','7','8','9','0','-','=','BACKSPACE'],
+      ['TAB','Q','W','E','R','T','Y','U','I','O','P','[',']','\\'],
+      ['CAPS','A','S','D','F','G','H','J','K','L',';',"'",'ENTER'],
+      ['SHIFT','Z','X','C','V','B','N','M',',','.','/','SHIFT'],
+      ['SPACE']
+    ]
+  },
+  dvorak: {
+    name: 'Dvorak',
+    rows: [
+      ['`','1','2','3','4','5','6','7','8','9','0','[',']','BACKSPACE'],
+      ['TAB',"'",',','.','P','Y','F','G','C','R','L','/','=','\\'],
+      ['CAPS','A','O','E','U','I','D','H','T','N','S','-','ENTER'],
+      ['SHIFT',';','Q','J','K','X','B','M','W','V','Z','SHIFT'],
+      ['SPACE']
+    ]
+  },
+  colemak: {
+    name: 'Colemak',
+    rows: [
+      ['`','1','2','3','4','5','6','7','8','9','0','-','=','BACKSPACE'],
+      ['TAB','Q','W','F','P','G','J','L','U','Y',';','[',']','\\'],
+      ['CAPS','A','R','S','T','D','H','N','E','I','O',"'",'ENTER'],
+      ['SHIFT','Z','X','C','V','B','K','M',',','.','/','SHIFT'],
+      ['SPACE']
+    ]
+  }
+};
+
+function renderKeyboard(target, stats = [], layoutName = currentLayout) {
   const plain = "`" + "1234567890-=[]" + String.fromCharCode(92) + ";',./";
   const shifted = '~!@#$%^&*()_+{}|:"<>?';
   const map = new Map();
@@ -249,14 +464,10 @@ function renderKeyboard(target, stats = []) {
     total.errorRate = total.attempts ? total.errors / total.attempts : 0;
     map.set(key, total);
   }
-  const rows = [
-    ['`','1','2','3','4','5','6','7','8','9','0','-','=','BACKSPACE'],
-    ['TAB','Q','W','E','R','T','Y','U','I','O','P','[',']','\\'],
-    ['CAPS','A','S','D','F','G','H','J','K','L',';',"'",'ENTER'],
-    ['SHIFT','Z','X','C','V','B','N','M',',','.','/','SHIFT'], ['SPACE']
-  ];
+  const layout = KEYBOARD_LAYOUTS[layoutName] || KEYBOARD_LAYOUTS.qwerty;
+  const rows = layout.rows;
   const fragment = document.createDocumentFragment();
-  rows.forEach((row, rowIndex) => {
+  rows.forEach(row => {
     const div = document.createElement('div');
     div.className = 'keyboard-row';
     row.forEach(keyStr => {
@@ -274,7 +485,7 @@ function renderKeyboard(target, stats = []) {
         else if (stat.errorRate > 0.15) keyEl.classList.add('high');
         else if (stat.errorRate >= 0.05) keyEl.classList.add('mid');
         else keyEl.classList.add('low');
-        keyEl.title = `${keyStr} · ${Math.round(stat.errorRate * 100)}% error rate · ${stat.attempts} attempts`;
+        keyEl.title = `${keyStr} · ${Math.round(stat.errorRate * 100)}% error rate · ${stat.attempts} attempts${stat.attempts < 3 ? ' (insufficient data < 3)' : ''}`;
       } else {
         keyEl.title = `${keyStr} · not tested yet`;
       }
@@ -316,19 +527,58 @@ function hideMultiplayerCars() {
   });
 }
 
+function interpolateGhost(timeline, elapsed) {
+  if (!timeline || !timeline.length) return { progress: 0, wpm: 0 };
+  const getT = e => e.t !== undefined ? e.t : e.time !== undefined ? e.time : 0;
+  const getP = e => {
+    const val = e.p !== undefined ? e.p : e.progress !== undefined ? e.progress : 0;
+    return val <= 1 && val > 0 ? val * 100 : val;
+  };
+  const getW = e => e.w !== undefined ? e.w : e.wpm !== undefined ? e.wpm : 0;
+
+  if (elapsed <= getT(timeline[0])) {
+    const t0 = getT(timeline[0]);
+    const r = t0 > 0 ? elapsed / t0 : 0;
+    return { progress: getP(timeline[0]) * r, wpm: getW(timeline[0]) * r };
+  }
+  if (elapsed >= getT(timeline[timeline.length - 1])) {
+    const last = timeline[timeline.length - 1];
+    return { progress: getP(last), wpm: getW(last) };
+  }
+  for (let i = 0; i < timeline.length - 1; i++) {
+    const t0 = getT(timeline[i]);
+    const t1 = getT(timeline[i + 1]);
+    if (elapsed >= t0 && elapsed <= t1) {
+      const dt = t1 - t0;
+      const ratio = dt > 0 ? (elapsed - t0) / dt : 0;
+      const p0 = getP(timeline[i]);
+      const p1 = getP(timeline[i + 1]);
+      const w0 = getW(timeline[i]);
+      const w1 = getW(timeline[i + 1]);
+      return {
+        progress: p0 + ratio * (p1 - p0),
+        wpm: w0 + ratio * (w1 - w0)
+      };
+    }
+  }
+  const last = timeline[timeline.length - 1];
+  return { progress: getP(last), wpm: getW(last) };
+}
+
 function renderTyping() {
   const state = engine.getState();
-  const progress = state.position / state.characters.length * 100;
+  const progress = state.characters.length > 0 ? state.position / state.characters.length * 100 : 0;
   $('#racer').style.left = `${progress}%`;
   updateRacerCar($('#racer'), progress, $('#car-tag-you'), `YOU: ${format(state.wpm)} WPM`);
 
-  // Update Telemetry & Status matching Image 1
+  // Update Telemetry & Status
   $('#live-wpm').textContent = format(state.wpm);
   $('#live-accuracy').textContent = `${format(state.accuracy)}%`;
   $('#live-time').textContent = `${Math.ceil(state.remaining)}s`;
   $('#live-mistakes').textContent = state.mistakes;
   if ($('#stat-total-attempted')) $('#stat-total-attempted').textContent = state.totalKeystrokes;
   if ($('#stat-correct-chars')) $('#stat-correct-chars').textContent = state.correctCharacters;
+  if ($('#live-consistency')) $('#live-consistency').textContent = `${state.consistency}%`;
   if ($('#player-percent-label')) $('#player-percent-label').textContent = `${Math.round(progress)}% Done`;
   if ($('#player-wpm-label')) $('#player-wpm-label').textContent = `${format(state.wpm)} WPM`;
   if ($('#btn-status-ready')) {
@@ -343,6 +593,7 @@ function renderTyping() {
     button.disabled = multiplayer.active;
   }
   $('#btn-new-prompt').disabled = $('#btn-custom-passage').disabled = multiplayer.active;
+
   // Update Ghost / Opponent car
   if (multiplayer.active) {
     multiplayer.localPlayer.progress = Math.round(progress);
@@ -372,11 +623,30 @@ function renderTyping() {
     });
     $('#race-telemetry').textContent = telemetryStr;
   } else {
-    $('#race-telemetry').textContent = `YOU · ${format(state.wpm)} WPM`;
-    hideMultiplayerCars();
-    $('#opponent-name-label').textContent = 'PERSONAL BEST GHOST';
-    $('#ghost-percent-label').textContent = 'Unavailable · no recorded timeline';
-    $('#ghost-wpm-label').textContent = '—';
+    const ghost = sessionStore.getGhost(state.duration, state.mode);
+    if (ghostEnabled && ghost && ghost.timeline && ghost.timeline.length > 0) {
+      const ghostState = interpolateGhost(ghost.timeline, state.elapsed);
+      const ghostCar = $('#racer-p2');
+      updateRacerCar(ghostCar, ghostState.progress, $('#car-tag-ghost'), `GHOST: ${Math.round(ghostState.wpm)} WPM`);
+      const delta = progress - ghostState.progress;
+      const aheadStr = delta >= 0 ? `+${delta.toFixed(1)}% ahead` : `${Math.abs(delta).toFixed(1)}% behind`;
+      $('#opponent-name-label').textContent = `PB GHOST (${format(ghost.wpm)} WPM)`;
+      $('#ghost-percent-label').textContent = `${Math.round(ghostState.progress)}% Done (${aheadStr})`;
+      $('#ghost-wpm-label').textContent = `${format(ghostState.wpm)} WPM`;
+      $('#race-telemetry').textContent = `YOU · ${format(state.wpm)} WPM · GHOST ${format(ghostState.wpm)} WPM (${aheadStr})`;
+    } else if (!ghostEnabled) {
+      hideMultiplayerCars();
+      $('#opponent-name-label').textContent = 'PB GHOST';
+      $('#ghost-percent-label').textContent = 'Ghost disabled in settings';
+      $('#ghost-wpm-label').textContent = '—';
+      $('#race-telemetry').textContent = `YOU · ${format(state.wpm)} WPM`;
+    } else {
+      hideMultiplayerCars();
+      $('#opponent-name-label').textContent = 'PERSONAL BEST GHOST';
+      $('#ghost-percent-label').textContent = 'Unavailable · no recorded timeline';
+      $('#ghost-wpm-label').textContent = '—';
+      $('#race-telemetry').textContent = `YOU · ${format(state.wpm)} WPM`;
+    }
   }
 
   $('#race-progress').textContent = `${Math.round(progress)}% COMPLETE`;
@@ -407,9 +677,8 @@ function renderTyping() {
 
   if (renderedAttempts !== state.totalKeystrokes) {
     const keyAnalytics = ZenithAnalytics.keyAnalytics([state]);
-    renderKeyboard('#live-keyboard', state.perKey);
+    renderKeyboard('#live-keyboard', state.perKey, currentLayout);
     $('#live-weak').textContent = weakText(keyAnalytics);
-    // Render weak keys badges from Image 1
     const badgesWrap = $('#live-weak-badges');
     if (badgesWrap) {
       const weakList = ZenithAnalytics.weakestKeys(keyAnalytics).slice(0, 4);
@@ -434,7 +703,7 @@ function renderResults() {
   $('#result-description').textContent = saved ? state.finishReason === 'timeout' ? 'Time is up. Every keystroke is practice.' : 'Passage complete. Keep building the habit.' : 'Test ended early. This attempt was not saved.';
   $('#result-wpm').textContent = format(state.wpm); $('#result-accuracy').textContent = `${format(state.accuracy)}%`;
   $('#result-mistakes').textContent = state.mistakes; $('#result-characters').textContent = `${state.position} / ${state.characters.length}`;
-  $('#result-details').textContent = `${modeName(state.mode)} · ${state.difficulty} · ${state.duration}s mode · ${format(state.elapsed)}s elapsed · ${state.correctCharacters} correct characters`;
+  $('#result-details').textContent = `${modeName(state.mode)} · ${state.difficulty} · ${state.duration}s mode · ${format(state.elapsed)}s elapsed · ${state.correctCharacters} correct characters · ${state.consistency}% consistency`;
   $('#result-weak').textContent = weakText(ZenithAnalytics.keyAnalytics([state]));
   $('#save-status').textContent = saved ? sessionStore.storageAvailable ? 'Saved on this device. Your next session starts here.' : 'Saved for this visit only. Browser storage is unavailable.' : 'Only completed and timed-out sessions enter your history.';
   $('#personal-best-achievement').hidden = !saved || !result.personalBest;
@@ -442,6 +711,29 @@ function renderResults() {
   $('#practice-feedback').hidden = state.mode !== 'practice';
   $('#practice-feedback').textContent = state.mode === 'practice' ? practiceFeedback(state, result.drill) : '';
   $('#result-practice').textContent = state.mode === 'practice' ? 'New Drill' : 'Practice Weak Keys';
+
+  // Ghost outcome
+  const ghostBadge = $('#ghost-race-result');
+  if (ghostBadge) {
+    if (result.ghost && saved && state.status === 'finished') {
+      ghostBadge.hidden = false;
+      if (state.wpm > result.ghost.wpm) {
+        ghostBadge.className = 'ghost-result-badge victory';
+        ghostBadge.textContent = '🏆 GHOST DEFEATED! New Personal Best Replay Timeline established.';
+      } else {
+        ghostBadge.className = 'ghost-result-badge deficit';
+        ghostBadge.textContent = `⚡ PB Ghost was +${format(result.ghost.wpm - state.wpm)} WPM faster. Try again to beat your ghost!`;
+      }
+    } else {
+      ghostBadge.hidden = true;
+    }
+  }
+
+  // Rematch button
+  const rematchBtn = $('#btn-rematch');
+  if (rematchBtn) {
+    rematchBtn.hidden = !multiplayer.active;
+  }
 
   const lbPanel = $('#mp-results-leaderboard');
   if (multiplayer.active && lbPanel) {
@@ -477,11 +769,49 @@ function renderStats() {
   const history = sessionStore.getHistory(filters);
   $('#export-csv').disabled = sessionStore.getHistory().length === 0;
   $('#export-status').textContent = $('#export-csv').disabled ? 'Complete a session to export your history.' : '';
-  const bests = sessionStore.getPersonalBests();
+
+  // Overall metric cards
+  const overall = sessionStore.getOverallStats(filters);
+  if ($('#stat-high-wpm')) $('#stat-high-wpm').textContent = format(overall.highestWpm);
+  if ($('#stat-best-acc')) $('#stat-best-acc').textContent = `${format(overall.bestAccuracy)}%`;
+  if ($('#stat-avg-wpm')) $('#stat-avg-wpm').textContent = format(overall.averageWpm);
+  if ($('#stat-total-tests')) $('#stat-total-tests').textContent = overall.totalTests;
+  if ($('#stat-total-chars')) $('#stat-total-chars').textContent = overall.totalCharacters;
+  if ($('#stat-consistency')) $('#stat-consistency').textContent = `${overall.averageConsistency}%`;
+
+  // Normal Personal Bests
+  const bests = sessionStore.getPersonalBests('test');
   $('#personal-bests').replaceChildren(...[30,60,120].map(duration => {
     const div = document.createElement('div'); const strong = document.createElement('strong'); const label = document.createElement('span');
     strong.textContent = format(bests[duration]); label.textContent = `${duration} SECOND BEST`; div.append(strong,label); return div;
   }));
+
+  // Programming Personal Bests
+  const progBests = sessionStore.getPersonalBests('programming');
+  const progBestsEl = $('#programming-personal-bests');
+  if (progBestsEl) {
+    progBestsEl.replaceChildren(...[30,60,120].map(duration => {
+      const div = document.createElement('div'); const strong = document.createElement('strong'); const label = document.createElement('span');
+      strong.textContent = format(progBests[duration]); label.textContent = `${duration}s CODE BEST`; div.append(strong,label); return div;
+    }));
+  }
+
+  // Top Mistyped Bigrams
+  const bigramsEl = $('#stats-bigrams');
+  if (bigramsEl) {
+    const bigrams = sessionStore.getBigrams(filters).slice(0, 12);
+    if (bigrams.length) {
+      bigramsEl.replaceChildren(...bigrams.map(b => {
+        const chip = document.createElement('span');
+        chip.className = 'bigram-chip';
+        chip.innerHTML = `"${keyName(b.pair[0])}→${keyName(b.pair[1])}" <span class="count">${b.count}×</span>`;
+        return chip;
+      }));
+    } else {
+      bigramsEl.textContent = 'No character pair mistake patterns recorded yet.';
+    }
+  }
+
   $('#accuracy-summary').textContent = history.length ? `${history.length} sessions · Average accuracy ${format(history.reduce((sum, row) => sum + row.accuracy, 0) / history.length)}% · Latest ${format(history.at(-1).accuracy)}%` : 'Your first completed session is the start of your story.';
   $('#history-empty').textContent = history.length ? '' : 'No completed sessions yet for this mode. Start a test or try a practice drill.';
   $('#history-body').replaceChildren(...history.slice().reverse().map(row => {
@@ -491,13 +821,17 @@ function renderStats() {
     }
     return tr;
   }));
-  const rows = sessionStore.getKeyStats(filters); renderKeyboard('#stats-keyboard', rows);
+  const rows = sessionStore.getKeyStats(filters);
+  renderKeyboard('#stats-keyboard', rows, currentLayout);
   $('#stats-weak').textContent = weakText(rows);
+  if ($('#stats-layout-label')) $('#stats-layout-label').textContent = (KEYBOARD_LAYOUTS[currentLayout] || KEYBOARD_LAYOUTS.qwerty).name;
+
   if (chart) { chart.destroy(); chart = null; }
   $('#chart-wrap').hidden = !history.length || !window.Chart;
   $('#chart-empty').hidden = history.length > 0 && !!window.Chart;
   $('#chart-empty').textContent = !history.length ? 'Complete a test to see your WPM progress here.' : 'Chart unavailable. Your exact results are available in the table below.';
   if (!history.length || !window.Chart) return;
+
   const points = sessionStore.getProgress(filters);
   const color = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim();
   chart = new Chart($('#progress-chart'), { type: 'line', data: {
@@ -508,6 +842,7 @@ function renderStats() {
       const point = points[context.dataIndex]; return `${format(point.accuracy)}% accuracy · ${modeName(point.mode)} · ${point.difficulty} · ${point.duration}s`;
     } } } }, scales: { x: { ticks: { color, maxTicksLimit: 5 }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color }, title: { display: true, text: 'Words per minute', color } } } } });
 }
+
 function applyKeys(text) {
   for (const key of text) { engine.handleKey(key); if (engine.status === 'finished') break; }
   renderTyping();
@@ -523,19 +858,53 @@ function initMultiplayerChannel(roomId) {
     multiplayer.channel = new BroadcastChannel(channelName);
     multiplayer.channel.onmessage = event => handleMultiplayerMessage(event.data);
   }
+  initWebSocket(roomId);
 }
-window.addEventListener('storage', event => {
-    if (!multiplayer.channel && multiplayer.roomId && event.key === 'type_e_room_' + multiplayer.roomId && event.newValue) {
+
+function initWebSocket(roomId) {
+  if (typeof WebSocket === 'undefined') return;
+  try {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = location.host || 'localhost:8080';
+    const wsUrl = `${protocol}//${host}`;
+    const ws = new WebSocket(wsUrl);
+    ws.onopen = () => {
+      multiplayer.wsConnected = true;
+      ws.send(JSON.stringify({
+        type: multiplayer.isHost ? 'CREATE_ROOM' : 'JOIN_ROOM',
+        roomId,
+        player: multiplayer.localPlayer
+      }));
+    };
+    ws.onmessage = evt => {
       try {
-        const msg = JSON.parse(event.newValue);
-        if (msg.senderId !== multiplayer.localPlayer.id) handleMultiplayerMessage(msg);
+        const msg = JSON.parse(evt.data);
+        handleMultiplayerMessage(msg);
       } catch {}
-    }
+    };
+    ws.onerror = () => { multiplayer.wsConnected = false; };
+    ws.onclose = () => { multiplayer.wsConnected = false; };
+    wsClient = ws;
+  } catch {
+    multiplayer.wsConnected = false;
+  }
+}
+
+window.addEventListener('storage', event => {
+  if (!multiplayer.channel && multiplayer.roomId && event.key === 'type_e_room_' + multiplayer.roomId && event.newValue) {
+    try {
+      const msg = JSON.parse(event.newValue);
+      if (msg.senderId !== multiplayer.localPlayer.id) handleMultiplayerMessage(msg);
+    } catch {}
+  }
 });
 
 function broadcastMultiplayer(msg) {
   msg.senderId = multiplayer.localPlayer.id;
   msg.timestamp = Date.now();
+  if (wsClient && wsClient.readyState === 1) {
+    try { wsClient.send(JSON.stringify(msg)); } catch {}
+  }
   if (multiplayer.channel) {
     try { multiplayer.channel.postMessage(msg); return; } catch {}
   }
@@ -582,7 +951,6 @@ function handleMultiplayerMessage(msg) {
       break;
     }
     case 'START_COUNTDOWN': {
-
       startCountdownSequence(msg);
       break;
     }
@@ -596,6 +964,15 @@ function handleMultiplayerMessage(msg) {
     }
     case 'FINISH': {
       recordMultiplayerResult(msg);
+      break;
+    }
+    case 'REMATCH': {
+      if (page === 'results' || page === 'typing') {
+        const diff = $('#mp-difficulty').value;
+        const dur = Number($('#mp-duration').value);
+        const prompt = Zenith.PROMPTS[diff] || Zenith.PROMPTS.medium;
+        startCountdownSequence({ config: { difficulty: diff, duration: dur }, prompt });
+      }
       break;
     }
     case 'LEAVE': {
@@ -627,10 +1004,10 @@ function updateLobbyUI() {
   const startBtn = $('#btn-start-multiplayer-race');
   if (multiplayer.isHost) {
     startBtn.hidden = false;
-    $('#lobby-instructions').textContent = 'You are the host. Open the invite in another tab of this browser to add a rival.';
+    $('#lobby-instructions').textContent = 'You are the host. Open the invite in another tab or device to add a rival.';
   } else {
     startBtn.hidden = true;
-    $('#lobby-instructions').textContent = multiplayer.players.size > 1 ? 'Connected. Waiting for the host to start.' : 'Waiting for the host in another tab of this browser.';
+    $('#lobby-instructions').textContent = multiplayer.players.size > 1 ? 'Connected. Waiting for the host to start.' : 'Waiting for the host to start.';
   }
 }
 
@@ -692,6 +1069,10 @@ function leaveRoom() {
     if (multiplayer.channel) {
       try { multiplayer.channel.close(); } catch {}
     }
+    if (wsClient) {
+      try { wsClient.close(); } catch {}
+      wsClient = null;
+    }
   }
   multiplayer.active = false;
   multiplayer.channel = null;
@@ -728,7 +1109,46 @@ function startCountdownSequence(configMsg) {
     resetRendering();
     renderPracticeContext();
     renderTyping();
-    $('#typing-input').focus();
+
+    const overlay = $('#race-countdown-overlay');
+    const numEl = $('#countdown-number');
+    const txtEl = $('#countdown-text');
+    const input = $('#typing-input');
+    if (input) input.disabled = true;
+
+    if (overlay && numEl) {
+      overlay.hidden = false;
+      let count = 3;
+      numEl.textContent = count;
+      if (txtEl) txtEl.textContent = 'GET READY';
+      playCountdownBeep(false);
+
+      if (multiplayer.countdownTimer) clearInterval(multiplayer.countdownTimer);
+      multiplayer.countdownTimer = setInterval(() => {
+        count--;
+        if (count > 0) {
+          numEl.textContent = count;
+          playCountdownBeep(false);
+        } else if (count === 0) {
+          numEl.textContent = 'GO!';
+          if (txtEl) txtEl.textContent = 'FLOOR IT!';
+          playCountdownBeep(true);
+        } else {
+          clearInterval(multiplayer.countdownTimer);
+          multiplayer.countdownTimer = null;
+          overlay.hidden = true;
+          if (input) {
+            input.disabled = false;
+            input.focus();
+          }
+        }
+      }, 700);
+    } else {
+      if (input) {
+        input.disabled = false;
+        input.focus();
+      }
+    }
   } catch (e) {
     console.error(e);
   }
@@ -809,7 +1229,8 @@ function syncCardOption(target, val, fromSelect = false) {
       }
     }
     $$(`.option-pill[data-target="${target}"]`).forEach(p => {
-      p.querySelector('input').checked = p.dataset.val === String(val);
+      const radio = p.querySelector('input');
+      if (radio) radio.checked = p.dataset.val === String(val);
       if (p.dataset.val === String(val)) p.classList.add('selected');
       else p.classList.remove('selected');
     });
@@ -819,8 +1240,10 @@ function syncCardOption(target, val, fromSelect = false) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  let savedTheme = 'neo'; try { savedTheme = localStorage.getItem('zenith-theme') || 'neo'; } catch { /* default */ }
+  let savedTheme = 'neo'; try { savedTheme = localStorage.getItem('zenith-theme') || 'neo'; } catch {}
   theme(savedTheme, false);
+  setLayout(currentLayout);
+
   $$('[data-theme-select]').forEach(select => select.addEventListener('change', () => theme(select.value)));
   $('#mode').addEventListener('change', sourceVisibility);
   $('#source').addEventListener('change', sourceVisibility);
@@ -845,7 +1268,8 @@ document.addEventListener('DOMContentLoaded', () => {
       $$('.option-pill[data-target="difficulty"]').forEach(pill => {
         const selected = pill.dataset.val === ($('#source').value === 'custom' ? 'custom' : $('#difficulty').value);
         pill.classList.toggle('selected', selected);
-        pill.querySelector('input').checked = selected;
+        const radio = pill.querySelector('input');
+        if (radio) radio.checked = selected;
       });
     }
   }));
@@ -865,7 +1289,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   $('#end-test').addEventListener('click', () => {
     const state = engine.getState();
-    if (state.status !== 'finished') result = { state, saved: false, drill: drillContext };
+    if (state.status !== 'finished') result = { state, saved: false, drill: drillContext, ghost: sessionStore.getGhost(state.duration, state.mode) };
     engine.restart();
     activeSession = false;
     go('results');
@@ -879,6 +1303,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   $('#history-filter').addEventListener('change', renderStats);
   $('#export-csv').addEventListener('click', exportHistory);
+
+  // Backup & Restore handlers
+  $('#btn-export-json')?.addEventListener('click', exportJsonBackup);
+  $('#input-restore-json')?.addEventListener('change', handleJsonRestore);
+
+  // Rematch button in results
+  $('#btn-rematch')?.addEventListener('click', () => {
+    broadcastMultiplayer({ type: 'REMATCH' });
+    const diff = $('#mp-difficulty').value;
+    const dur = Number($('#mp-duration').value);
+    const prompt = Zenith.PROMPTS[diff] || Zenith.PROMPTS.medium;
+    startCountdownSequence({ config: { difficulty: diff, duration: dur }, prompt });
+  });
 
   function editCustomPassage() {
     syncCardOption('source', 'custom');
@@ -906,6 +1343,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   $('#btn-new-prompt').addEventListener('click', () => {
     if (engine.mode === 'practice') return startPractice();
+    if (engine.mode === 'programming') return begin(false);
     const difficulty = engine.difficulty;
     const next = engine.prompt.join('') === alternates[difficulty] ? Zenith.PROMPTS[difficulty] : alternates[difficulty];
     syncCardOption('source', 'default');
@@ -915,25 +1353,116 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-custom-passage').addEventListener('click', editCustomPassage);
   $('#tab-race-track').addEventListener('click', event => {
     event.preventDefault();
-    if (engine.mode === 'practice') begin(false);
-    else $('#typing-input').focus();
+    if (engine.mode === 'practice' || engine.mode === 'programming') {
+      syncCardOption('source', 'default');
+      begin(false);
+    } else {
+      $('#typing-input').focus();
+    }
   });
+
+  // Code Mode Tab
+  $('#tab-code-mode')?.addEventListener('click', () => {
+    syncCardOption('source', 'programming');
+    begin(false);
+  });
+
+  // Code Symbols practice
+  $('#btn-practice-symbols')?.addEventListener('click', () => {
+    begin(true, true);
+  });
+
   $('#btn-sprint-mode').addEventListener('click', () => {
     if (multiplayer.active) leaveRoom();
     begin(false);
   });
-  // Sound Toggle
+
+  // Sound Toggle & Volume Controls
+  const updateSoundUI = () => {
+    const btn = $('#btn-sound-toggle');
+    if (btn) {
+      btn.setAttribute('aria-pressed', String(soundEnabled));
+      btn.textContent = soundEnabled ? '🔊 SOUND: ON' : '🔈 SOUND: OFF';
+    }
+    const chk = $('#settings-sound-chk');
+    if (chk) chk.checked = soundEnabled;
+  };
+  updateSoundUI();
+
   $('#btn-sound-toggle')?.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
-    $('#btn-sound-toggle').setAttribute('aria-pressed', String(soundEnabled));
-    $('#btn-sound-toggle').textContent = soundEnabled ? '🔊 SOUND: ON' : '🔈 SOUND: OFF';
+    try { localStorage.setItem('zenith-sound', String(soundEnabled)); } catch {}
+    updateSoundUI();
   });
+  $('#settings-sound-chk')?.addEventListener('change', e => {
+    soundEnabled = e.target.checked;
+    try { localStorage.setItem('zenith-sound', String(soundEnabled)); } catch {}
+    updateSoundUI();
+  });
+  $('#settings-volume')?.addEventListener('input', e => {
+    soundVolume = Number(e.target.value) / 100;
+    try { localStorage.setItem('zenith-volume', e.target.value); } catch {}
+  });
+
+  // Ghost Toggle
+  const updateGhostUI = () => {
+    const btn = $('#btn-ghost-toggle');
+    if (btn) {
+      btn.setAttribute('aria-pressed', String(ghostEnabled));
+      btn.textContent = ghostEnabled ? '👻 GHOST: ON' : '👻 GHOST: OFF';
+    }
+    const chk = $('#settings-ghost-chk');
+    if (chk) chk.checked = ghostEnabled;
+  };
+  updateGhostUI();
+
+  $('#btn-ghost-toggle')?.addEventListener('click', () => {
+    ghostEnabled = !ghostEnabled;
+    try { localStorage.setItem('zenith-ghost', String(ghostEnabled)); } catch {}
+    updateGhostUI();
+    if (activeSession) renderTyping();
+  });
+  $('#settings-ghost-chk')?.addEventListener('change', e => {
+    ghostEnabled = e.target.checked;
+    try { localStorage.setItem('zenith-ghost', String(ghostEnabled)); } catch {}
+    updateGhostUI();
+    if (activeSession) renderTyping();
+  });
+
+  // Keyboard Layout Listeners
+  $('#racer-layout-select')?.addEventListener('change', e => setLayout(e.target.value));
+  $('#settings-layout')?.addEventListener('change', e => setLayout(e.target.value));
+
+  // Reduced Motion
+  $('#settings-motion-chk')?.addEventListener('change', e => {
+    document.documentElement.dataset.reducedMotion = String(e.target.checked);
+    try { localStorage.setItem('zenith-motion', String(e.target.checked)); } catch {}
+  });
+  try {
+    if (localStorage.getItem('zenith-motion') === 'true') {
+      document.documentElement.dataset.reducedMotion = 'true';
+      if ($('#settings-motion-chk')) $('#settings-motion-chk').checked = true;
+    }
+  } catch {}
 
   // Typing input handlers
   $('#typing-input').addEventListener('keydown', event => {
-    playKeyClick();
-    if (event.key === 'Tab' || event.ctrlKey || event.metaKey || event.altKey || event.isComposing || event.key === 'Process' || event.key === 'Unidentified') return;
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      playKeyClick();
+      engine.handleKey('Tab');
+      renderTyping();
+      return;
+    }
+    if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing || event.key === 'Process' || event.key === 'Unidentified') return;
     event.preventDefault();
+    const stBefore = engine.getState();
+    const expected = stBefore.characters[stBefore.position]?.expected;
+    if (event.key === 'Backspace' || event.key === expected) {
+      playKeyClick();
+    } else {
+      playErrorBuzz();
+    }
     engine.handleKey(event.key);
     renderTyping();
   });
@@ -972,7 +1501,6 @@ document.addEventListener('DOMContentLoaded', () => {
       prompt
     };
     broadcastMultiplayer(startMsg);
-
     startCountdownSequence(startMsg);
   });
 

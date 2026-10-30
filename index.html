@@ -9,6 +9,7 @@
   <script src="vendor/chart.umd.min.js" defer></script>
   <script src="typing-engine.js" defer></script>
   <script src="session-analytics.js" defer></script>
+  <script src="programming-snippets.js" defer></script>
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -33,6 +34,7 @@
     <!-- Center Navigation Tabs -->
     <div class="header-center-tabs" id="racer-tabs" style="display:none">
       <a href="#typing" class="tab-btn active" id="tab-race-track">🏁 RACE TRACK</a>
+      <button class="tab-btn" id="tab-code-mode" type="button">💻 CODE MODE</button>
       <button class="tab-btn" id="tab-practice" data-practice type="button">🎯 PRACTICE DRILLS</button>
       <a href="#stats" class="tab-btn" id="tab-analytics">📊 ANALYTICS</a>
     </div>
@@ -48,8 +50,9 @@
 
     <!-- Racer View Quick Settings (Matching Image 1 top right) -->
     <div class="racer-header-controls" id="racer-controls" style="display:none">
-      <div class="control-pill">KEYS: <select id="racer-layout-select" aria-label="Keyboard mapping"><option>QWERTY</option></select></div>
+      <div class="control-pill">KEYS: <select id="racer-layout-select" aria-label="Keyboard mapping"><option value="qwerty">QWERTY</option><option value="dvorak">Dvorak</option><option value="colemak">Colemak</option></select></div>
       <div class="control-pill">THEME: <select id="racer-theme-select" data-theme-select aria-label="Theme select"><option value="neo">NEO YELLOW</option><option value="dark">DARK</option><option value="light">LIGHT</option></select></div>
+      <button aria-pressed="true" id="btn-ghost-toggle" class="control-pill btn-ghost" type="button">👻 GHOST: ON</button>
       <button aria-pressed="false" id="btn-sound-toggle" class="control-pill btn-sound" type="button">🔈 SOUND: OFF</button>
     </div>
   </header>
@@ -85,10 +88,10 @@
       <form id="session-form" class="arena-config-form" novalidate>
         <!-- Retain original selects for full backward compatibility & test suites -->
         <div hidden>
-          <select id="mode"><option value="test" selected>Race Track</option><option value="practice">Practice Drill</option></select>
+          <select id="mode"><option value="test" selected>Race Track</option><option value="programming">Programming Mode</option><option value="practice">Practice Drill</option></select>
           <select id="difficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option><option value="custom">Custom</option></select>
           <select id="duration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="120">120 seconds</option></select>
-          <select id="source"><option value="default" selected>Default Prompts</option><option value="custom">Custom Text</option></select>
+          <select id="source"><option value="default" selected>Default Prompts</option><option value="custom">Custom Text</option><option value="programming">Programming Code</option></select>
           <select id="home-theme" data-theme-select><option value="neo" selected>Neo Yellow</option><option value="dark">Dark</option><option value="light">Light</option></select>
         </div>
 
@@ -168,6 +171,11 @@
                 <span class="radio-custom"></span>
                 <div class="option-text"><strong>Custom Text</strong><small>Type your own content</small></div>
               </label>
+              <label class="option-pill" data-target="source" data-val="programming">
+                <input type="radio" name="opt-source" value="programming">
+                <span class="radio-custom"></span>
+                <div class="option-text"><strong>Programming Code</strong><small>Python, JS, C, SQL &amp; more</small></div>
+              </label>
             </div>
             <div class="card-doodle">
               <span>💡 Want something<br>personal? Choose<br>custom text! <span class="burst">\|/</span></span>
@@ -236,6 +244,31 @@
           <label>Custom Text Passage
             <textarea id="custom-text" rows="3" placeholder="Paste or type a passage to practice…" aria-describedby="config-error"></textarea>
           </label>
+        </div>
+
+        <!-- Programming Code Options -->
+        <div id="programming-wrap" hidden class="custom-passage-wrap programming-options-wrap">
+          <div class="programming-selectors-row">
+            <label>Language
+              <select id="programming-language">
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="c">C</option>
+                <option value="cpp">C++</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+                <option value="sql">SQL</option>
+                <option value="random">Random Language</option>
+              </select>
+            </label>
+            <label>Difficulty Tier
+              <select id="programming-difficulty">
+                <option value="beginner">Beginner</option>
+                <option value="intermediate" selected>Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </label>
+          </div>
         </div>
         <p id="practice-note" class="muted" hidden>Practice Drill generates a passage from your weak keys.</p>
         <p id="config-error" class="error" role="alert"></p>
@@ -361,6 +394,10 @@
               <rect x="-24" y="-13" width="52" height="26" rx="6" fill="#c084fc" stroke="#111" stroke-width="2.5"/>
             </g>
           </svg>
+          <div id="race-countdown-overlay" class="race-countdown-overlay" hidden>
+            <div id="countdown-number">3</div>
+            <div id="countdown-text">GET READY</div>
+          </div>
         </div>
         <!-- Required contract text for phase5 test -->
         <p class="muted sr-only">Ghost unavailable: saved sessions have no recorded progress timeline.</p>
@@ -403,6 +440,7 @@
               <div class="detail-row"><span>Total Attempted:</span><strong id="stat-total-attempted">0</strong></div>
               <div class="detail-row"><span>Correct Chars:</span><strong id="stat-correct-chars" class="val-success">0</strong></div>
               <div class="detail-row"><span>Mistakes / Errors:</span><strong id="live-mistakes" class="val-danger">0</strong></div>
+              <div class="detail-row"><span>Consistency:</span><strong id="live-consistency">100%</strong></div>
             </div>
           </div>
         </div>
@@ -485,7 +523,10 @@
                   </div>
                   <p id="live-weak" class="sr-only"></p>
                 </div>
-                <button class="btn-practice-weak" data-practice type="button">🎯 PRACTICE WEAK KEYS</button>
+                <div class="weak-actions-group">
+                  <button class="btn-practice-weak" id="btn-practice-symbols" type="button" style="display:none">⚡ CODE SYMBOLS</button>
+                  <button class="btn-practice-weak" data-practice type="button">🎯 PRACTICE WEAK KEYS</button>
+                </div>
               </div>
 
               <div class="keyboard-header-strip">
@@ -595,9 +636,11 @@
         <div id="mp-leaderboard-list"></div>
       </div>
       <p id="personal-best-achievement" class="achievement" hidden></p>
+      <p id="ghost-race-result" class="ghost-result-badge" hidden></p>
       <p id="practice-feedback" class="practice-feedback" hidden></p>
       <div class="actions results-actions">
         <button id="try-again" class="primary">Try Again ↗</button>
+        <button id="btn-rematch" class="primary" hidden type="button">Rematch ↗</button>
         <button id="result-practice" data-practice>Practice Weak Keys</button>
         <a class="button" href="#stats">View Stats</a>
         <a href="#home">Back to Home</a>
@@ -607,10 +650,31 @@
     <!-- VIEW 5: STATS -->
     <section id="stats" class="view" hidden aria-labelledby="stats-title">
       <div class="section-heading"><div><p class="eyebrow">YOUR WORK, IN NUMBERS</p><h1 id="stats-title" tabindex="-1">Every session counts.</h1></div><button class="primary" data-practice>Practice Weak Keys ↗</button></div>
+      <div class="metrics overall-metrics-grid">
+        <div><strong id="stat-high-wpm">0.0</strong><span>HIGHEST WPM</span></div>
+        <div><strong id="stat-best-acc">100%</strong><span>BEST ACCURACY</span></div>
+        <div><strong id="stat-avg-wpm">0.0</strong><span>AVERAGE WPM</span></div>
+        <div><strong id="stat-total-tests">0</strong><span>TESTS</span></div>
+        <div><strong id="stat-total-chars">0</strong><span>CHARS</span></div>
+        <div><strong id="stat-consistency">100%</strong><span>CONSISTENCY</span></div>
+      </div>
       <h2>Personal bests <span class="muted small">WPM · all modes</span></h2><div id="personal-bests" class="metrics bests"></div>
-      <div class="panel chart-panel"><div class="section-heading"><h2>The bigger picture.</h2><label class="filter-label">Mode<select id="history-filter"><option value="all">All modes</option><option value="test">Race Track</option><option value="custom">Custom Text</option><option value="practice">Practice Drill</option></select></label></div><p id="accuracy-summary" class="muted"></p><p id="chart-empty" class="empty"></p><div id="chart-wrap" class="chart-wrap"><canvas id="progress-chart" role="img" aria-label="WPM across completed sessions. Exact values appear in Recent sessions below."></canvas></div></div>
-      <div class="section-heading"><h2>Know your keyboard.</h2><span class="muted">Saved sessions · QWERTY</span></div><div id="stats-keyboard" class="panel keyboard-panel"></div><p id="stats-weak" class="weak-strip"></p>
+      <h2>Programming personal bests <span class="muted small">WPM · Code Mode</span></h2><div id="programming-personal-bests" class="metrics bests"></div>
+      <div class="panel chart-panel"><div class="section-heading"><h2>The bigger picture.</h2><label class="filter-label">Mode<select id="history-filter"><option value="all">All modes</option><option value="test">Race Track</option><option value="programming">Programming</option><option value="custom">Custom Text</option><option value="practice">Practice Drill</option></select></label></div><p id="accuracy-summary" class="muted"></p><p id="chart-empty" class="empty"></p><div id="chart-wrap" class="chart-wrap"><canvas id="progress-chart" role="img" aria-label="WPM across completed sessions. Exact values appear in Recent sessions below."></canvas></div></div>
+      <div class="section-heading"><h2>Know your keyboard.</h2><span class="muted">Saved sessions · <span id="stats-layout-label">QWERTY</span></span></div><div id="stats-keyboard" class="panel keyboard-panel"></div><p id="stats-weak" class="weak-strip"></p>
+      <h2>Frequently mistyped character pairs</h2>
+      <div id="stats-bigrams" class="panel bigrams-container"></div>
       <div class="panel history-panel"><div class="section-heading"><h2>Recent sessions</h2><button id="export-csv" aria-describedby="export-status">Export all history · CSV</button></div><p id="export-status" class="muted" role="status"></p><p id="history-empty" class="empty"></p><div class="table-scroll"><table><caption class="sr-only">Completed tests, newest first</caption><thead><tr><th>Date</th><th>Mode</th><th>Difficulty</th><th>Time</th><th>WPM</th><th>Accuracy</th><th>Mistakes</th></tr></thead><tbody id="history-body"></tbody></table></div></div>
+      <div class="panel backup-panel">
+        <div class="section-heading">
+          <h2>Backup &amp; Restore</h2>
+          <div class="backup-actions">
+            <button id="btn-export-json" type="button">Export Backup (JSON)</button>
+            <label class="button file-button">Restore Backup (JSON)<input type="file" id="input-restore-json" accept=".json" hidden></label>
+          </div>
+        </div>
+        <p id="backup-status" class="muted" role="status"></p>
+      </div>
     </section>
 
     <!-- VIEW 6: SETTINGS -->
@@ -622,8 +686,26 @@
         <label>Theme<select id="settings-theme" data-theme-select><option value="neo">Neo Yellow</option><option value="dark">Dark</option><option value="light">Light</option></select></label>
         <p id="theme-status" class="muted" role="status">Your theme is saved on this device.</p>
         <hr>
-        <h3>Keyboard layout</h3><span class="badge">QWERTY</span>
-        <p class="muted">A familiar layout, with insights for each key.</p>
+        <h3>Audio Feedback</h3>
+        <label><input type="checkbox" id="settings-sound-chk"> Enable sound effects (key clicks, error buzz, race fanfares)</label>
+        <label>Volume: <input type="range" id="settings-volume" min="0" max="100" value="50"></label>
+        <hr>
+        <h3>Ghost Racing</h3>
+        <label><input type="checkbox" id="settings-ghost-chk" checked> Replay personal-best ghost car during tests</label>
+        <hr>
+        <h3>Keyboard layout</h3>
+        <label>Physical Layout
+          <select id="settings-layout">
+            <option value="qwerty">QWERTY</option>
+            <option value="dvorak">Dvorak</option>
+            <option value="colemak">Colemak</option>
+          </select>
+        </label>
+        <p class="muted">Switches the visual keyboard and physical heat mapping without modifying raw analytics.</p>
+        <hr>
+        <h3>Motion &amp; Visuals</h3>
+        <label><input type="checkbox" id="settings-motion-chk"> Reduced Motion (Disable car drift &amp; exhaust animations)</label>
+        <hr>
         <h3>Your data stays here.</h3>
         <p class="muted">Up to 100 recent sessions and your personal bests are stored in this browser. No account needed.</p>
       </div>

@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const assets = ['index.html', 'styles.css', 'script.js', 'typing-engine.js', 'session-analytics.js', 'assets/keyboard-hero.svg', 'vendor/chart.umd.min.js', 'vendor/Chart.LICENSE.md'];
+const assets = ['index.html', 'styles.css', 'script.js', 'typing-engine.js', 'session-analytics.js', 'programming-snippets.js', 'assets/keyboard-hero.svg', 'vendor/chart.umd.min.js', 'vendor/Chart.LICENSE.md'];
 const root = path.resolve(__dirname, '..');
 function build() {
   for (const asset of assets) {
