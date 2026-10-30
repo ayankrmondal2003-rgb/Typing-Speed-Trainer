@@ -1,17 +1,54 @@
 // Real-time Multiplayer WebSocket Server for Type!e
 const http = require('node:http');
+const fs = require('node:fs/promises');
+const path = require('node:path');
 const { WebSocketServer, WebSocket } = require('ws');
 const { PROMPTS } = require('./typing-engine');
 
 const PORT = Number(process.env.PORT || 8080);
 const HOST = process.env.HOST || '0.0.0.0';
 
-const server = http.createServer((req, res) => {
+const mimeTypes = {
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'text/javascript',
+  '.json': 'application/json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.md': 'text/plain'
+};
+
+const server = http.createServer(async (req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', uptime: process.uptime(), rooms: rooms.size }));
     return;
   }
+
+  if (['GET', 'HEAD'].includes(req.method)) {
+    try {
+      let pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname).slice(1) || 'index.html';
+      let filePath = path.join(__dirname, 'dist', pathname);
+      let stat;
+      try { stat = await fs.stat(filePath); }
+      catch {
+        filePath = path.join(__dirname, pathname);
+        try { stat = await fs.stat(filePath); } catch {}
+      }
+      if (stat && stat.isFile()) {
+        const ext = path.extname(filePath);
+        const data = await fs.readFile(filePath);
+        res.writeHead(200, {
+          'Content-Type': `${mimeTypes[ext] || 'application/octet-stream'}; charset=utf-8`,
+          'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600'
+        });
+        res.end(req.method === 'HEAD' ? undefined : data);
+        return;
+      }
+    } catch {}
+  }
+
   res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
   res.end('Type!e Multiplayer WebSocket Server is running.');
 });
