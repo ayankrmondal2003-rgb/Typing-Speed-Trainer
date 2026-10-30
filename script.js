@@ -156,7 +156,7 @@ function route() {
   if (page === 'stats') renderStats();
   if (page === 'results') renderResults();
   if (page === 'typing') { renderTyping(); $('#typing-input').focus(); }
-  else $(`#${page}-title`)?.focus({ preventScroll: true });
+  else if (page !== 'home') $(`#${page}-title`)?.focus({ preventScroll: true });
 }
 
 function sourceVisibility() {
