@@ -1,29 +1,195 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="neo">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Typing Speed Trainer</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, sans-serif; line-height: 1.5; background: #fafafa; color: #1f2933; }
-    header, main { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 0; }
-    h1 { margin: 0; font-size: 1.75rem; }
-    .tag { margin: .25rem 0 0; color: #52606d; }
-    .start { border: 1px solid #cbd2d9; border-radius: 6px; padding: 1rem 1.25rem; background: #fff; }
-  </style>
+  <meta name="description" content="Build better typing habits with focused tests, key-by-key insights and personalized practice.">
+  <title>Type e — Type. Improve. Be better.</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor/chart.umd.min.js" defer></script>
+  <script src="typing-engine.js" defer></script>
+  <script src="session-analytics.js" defer></script>
+  <script src="script.js" defer></script>
 </head>
 <body>
-  <header>
-    <h1>Typing Speed Trainer</h1>
-    <p class="tag">Measure speed and accuracy, and find the keys that slow you down.</p>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="#home" aria-label="Type e home"><span class="brand-mark" aria-hidden="true">e</span><span>Type e<small>TYPE. IMPROVE. BE BETTER.</small></span></a>
+    <nav aria-label="Main navigation"><a href="#home">Home</a><a href="#multiplayer">Multiplayer</a><a href="#stats">Stats</a><a href="#settings">Settings</a></nav>
   </header>
-  <main id="app">
-    <div class="start">
-      <p id="status">Starting...</p>
-      <p>Replace this with your UI. The core tasks are listed in README.md.</p>
-    </div>
+  <main id="main">
+    <section id="home" class="view" aria-labelledby="home-title">
+      <div class="hero"><div class="hero-copy"><p class="eyebrow">A LITTLE PRACTICE. REAL PROGRESS.</p><h1 id="home-title" tabindex="-1">TURN YOUR<br>TYPING INTO<br><span class="highlight">PROGRESS.</span></h1><p class="subtitle">Measure. Practice. Improve.</p></div><img class="hero-keyboard" src="assets/keyboard-hero.svg" alt="" width="520" height="330"></div>
+      <form id="session-form" class="panel configuration" novalidate>
+        <div class="section-heading"><div><p class="eyebrow">01 / MAKE IT YOURS</p><h2>Set your pace.</h2></div><span class="badge">NO ACCOUNT. JUST YOU.</span></div>
+        <div class="form-grid">
+          <label>Mode<select id="mode"><option value="test">Race Track</option><option value="practice">Practice Drill</option></select></label>
+          <label>Difficulty<select id="difficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></label>
+          <label>Time<select id="duration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="120">120 seconds</option></select></label>
+          <label>Text source<select id="source"><option value="default">Default Prompts</option><option value="custom">Custom Text</option></select></label>
+          <label>Theme<select id="home-theme" data-theme-select><option value="neo">Neo Yellow</option><option value="dark">Dark</option><option value="light">Light</option></select></label>
+          <label>Keyboard layout<select aria-label="Keyboard layout"><option>QWERTY</option></select></label>
+        </div>
+        <div id="custom-wrap" hidden><label>Make it your own<textarea id="custom-text" rows="3" placeholder="Paste a passage you would like to practice…" aria-describedby="config-error"></textarea></label></div>
+        <p id="practice-note" class="muted" hidden>Practice Drill generates a passage from your weak keys. Your text source is kept for Race Track.</p>
+        <p id="config-error" class="error" role="alert"></p>
+        <div class="form-footer"><p class="muted">Your timer starts with your first character.<br>Focus on accuracy. Speed will follow.</p><div class="actions"><a class="button" href="#multiplayer">MULTIPLAYER RACE ↗</a><button class="primary" type="submit">START TYPING <span aria-hidden="true">↗</span></button></div></div>
+      </form>
+      <div class="home-note"><span>YOUR PACE. YOUR PROGRESS.</span><span>Built for the next personal best.</span></div>
+    </section>
+
+    <section id="multiplayer" class="view" hidden aria-labelledby="multiplayer-title">
+      <div class="section-heading"><div><p class="eyebrow">RACE TOGETHER · LIVE MULTIPLAYER</p><h1 id="multiplayer-title" tabindex="-1">Type e Grand Prix</h1></div><span class="badge" id="multiplayer-status-badge">MULTIPLAYER LOBBY</span></div>
+      <div id="mp-setup-view" class="multiplayer-grid">
+        <div class="panel mp-card">
+          <div class="section-heading"><h2>Host a Race</h2><span class="badge">CREATE ROOM</span></div>
+          <p class="muted">Create a private race room, invite friends with a single ID or link, and race simultaneously on the circuit track.</p>
+          <div class="form-grid mp-form-grid">
+            <label>Racer Nickname<input type="text" id="host-nickname" maxlength="15" value="SpeedRacer"></label>
+            <label>Difficulty<select id="mp-difficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></label>
+            <label>Duration<select id="mp-duration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="120">120 seconds</option></select></label>
+          </div>
+          <button id="btn-create-room" class="primary" style="margin-top:20px;width:100%">CREATE RACE ROOM <span aria-hidden="true">↗</span></button>
+        </div>
+        <div class="panel mp-card">
+          <div class="section-heading"><h2>Join a Race</h2><span class="badge">INVITE CODE</span></div>
+          <p class="muted">Got an invite? Paste the Room ID or the full invite link to join your friend's race track.</p>
+          <div class="form-grid mp-form-grid">
+            <label>Racer Nickname<input type="text" id="join-nickname" maxlength="15" value="TurboRacer"></label>
+            <label style="grid-column: span 2">Room ID or Invite Link<input type="text" id="join-room-input" placeholder="e.g. TE-4821 or paste invite URL"></label>
+          </div>
+          <p id="join-error" class="error" role="alert"></p>
+          <button id="btn-join-room" class="button" style="margin-top:20px;width:100%">JOIN RACE ROOM <span aria-hidden="true">↗</span></button>
+        </div>
+      </div>
+
+      <div id="mp-lobby" class="panel mp-lobby-panel" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">ROOM LOBBY</p><h2 id="lobby-room-display">ROOM: <span id="lobby-room-id" class="highlight">TE-XXXX</span></h2></div>
+          <div class="actions">
+            <button id="btn-copy-id" class="button">Copy Room ID</button>
+            <button id="btn-copy-link" class="primary">Copy Invite Link</button>
+            <button id="btn-leave-room" class="button">Leave Lobby</button>
+          </div>
+        </div>
+        <p id="share-feedback" class="muted" role="status" style="margin-bottom:16px"></p>
+        <div class="lobby-racers-section">
+          <h3>Connected Racers (<span id="lobby-count">1</span>/4)</h3>
+          <div id="lobby-racers-list" class="lobby-racers-list"></div>
+        </div>
+        <div class="form-footer" style="margin-top:24px">
+          <p id="lobby-instructions" class="muted">Share the invite link or Room ID. The host can start the race when racers join.</p>
+          <button id="btn-start-multiplayer-race" class="primary" hidden>START RACE <span aria-hidden="true">↗</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section id="typing" class="view" hidden aria-labelledby="typing-title">
+      <div class="flow-topbar">
+        <div class="toolbar"><a href="#home">← Back to Home</a><div class="actions"><button id="restart">Restart</button><button id="end-test">End Test</button></div></div>
+        <div class="section-heading flow-heading"><div><p class="eyebrow" id="session-label"></p><h1 id="typing-title" tabindex="-1">Find your flow.</h1></div><span class="badge" id="typing-status" role="status">Ready when you are</span></div>
+      </div>
+      <div class="metrics" id="live-metrics"><div><strong id="live-wpm">0</strong><span>WPM</span></div><div><strong id="live-accuracy">0%</strong><span>ACCURACY</span></div><div><strong id="live-time">60s</strong><span>REMAINING</span></div><div><strong id="live-mistakes">0</strong><span>MISTAKES</span></div></div>
+      <div id="mp-countdown-banner" class="mp-countdown-banner" hidden><span id="mp-countdown-text">READY... 3</span></div>
+      <div class="flow-grid">
+        <div class="flow-col flow-col-typing">
+          <div class="panel typing-panel"><p id="prompt" class="passage" aria-label="Typing passage"></p><label for="typing-input">Type here</label><textarea id="typing-input" rows="2" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" aria-describedby="input-help"></textarea><p id="input-help" class="muted">Backspace to correct. Enter for a new line. Paste is disabled during a test.</p><div class="progress-label"><span>PASSAGE PROGRESS</span><span id="progress-label">0%</span></div><progress id="passage-progress" value="0" max="100">0%</progress></div>
+          <div id="practice-context" class="practice-context" hidden>
+            <h2>A little focus goes a long way.</h2><div id="practice-targets" class="target-keys" aria-label="Target keys"></div>
+            <p id="practice-reason" class="muted"></p><button id="new-drill" data-practice>New Drill</button>
+          </div>
+        </div>
+        <div class="flow-col flow-col-visuals">
+          <div id="race-experience" class="race-experience" aria-label="Race track">
+            <div class="race-labels"><span>START</span><span id="race-progress">0% COMPLETE</span><span>FINISH</span></div>
+            <div class="circuit-header"><span>▧ SPRINT CIRCUIT</span><span id="race-telemetry">YOU · 0 WPM</span></div>
+            <div class="race-track circuit-track" aria-hidden="true">
+              <svg class="circuit" viewBox="0 0 1200 360" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <path id="circuit-route" d="M100 65 C100 225 220 265 370 265 L630 265 C775 265 790 115 925 115 S1100 195 1100 295"/>
+                  <pattern id="checkers" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="#fff9df"/><path d="M0 0h10v10H0zM10 10h10v10H10z" fill="#1d1d1d"/></pattern>
+                  <pattern id="stands" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="#616774"/><path d="M0 2h14M0 8h14" stroke="#333741" stroke-width="3"/></pattern>
+                </defs>
+                <rect width="1200" height="360" fill="#36745b"/>
+                <path d="M0 0h1200v24H0zM0 336h1200v24H0z" fill="url(#stands)"/>
+                <path d="M310 25h385l-30 55H350z" fill="#295e49" stroke="#234e3d" stroke-width="4"/>
+                <path d="M375 42h240" stroke="#ffe66d" stroke-width="3"/>
+                <text x="495" y="64" fill="#eee8ca" text-anchor="middle" font-family="monospace" font-size="14" letter-spacing="4">TYPE E MOTOR CIRCUIT</text>
+                <use href="#circuit-route" fill="none" stroke="#aa9570" stroke-width="156"/>
+                <use href="#circuit-route" fill="none" stroke="#15171b" stroke-width="140"/>
+                <use href="#circuit-route" fill="none" stroke="#e26472" stroke-width="132"/>
+                <use href="#circuit-route" fill="none" stroke="#fff4df" stroke-width="132" stroke-dasharray="14 14"/>
+                <use href="#circuit-route" fill="none" stroke="#292c35" stroke-width="114"/>
+                <use href="#circuit-route" fill="none" stroke="#161a20" stroke-width="88"/>
+                <use href="#circuit-route" fill="none" stroke="#292c35" stroke-width="76"/>
+                <use href="#circuit-route" fill="none" stroke="#e5dfc8" stroke-width="3" stroke-dasharray="20 18"/>
+                <path d="M43 55h114v20H43zM1043 285h114v20h-114z" fill="url(#checkers)" stroke="#ffe66d" stroke-width="2"/>
+                <text x="195" y="112" fill="#fff4df" font-family="monospace" font-size="13">START</text>
+                <text x="968" y="321" fill="#fff4df" font-family="monospace" font-size="13">FINISH</text>
+                <g id="racer" class="circuit-racer" transform="translate(100 65) rotate(90)">
+                  <rect x="-20" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="-20" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
+                  <rect x="12" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="12" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
+                  <rect x="-28" y="-14" width="58" height="28" rx="7" fill="#f45968" stroke="#111" stroke-width="3"/>
+                  <path d="M-4-13h8v26H-4z" fill="#ffe66d"/><path d="m8-10 9 3v14l-9 3zM-13-9h8v18h-8z" fill="#70d3e5" stroke="#111" stroke-width="2"/>
+                  <path d="M-27-18v36" stroke="#111" stroke-width="5"/><path d="M25-10v5m0 10v5" stroke="#fff4d8" stroke-width="4"/>
+                </g>
+                <g id="racer-p2" class="circuit-racer" style="display:none" transform="translate(100 65) rotate(90)">
+                  <rect x="-20" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="-20" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
+                  <rect x="12" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="12" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
+                  <rect x="-28" y="-14" width="58" height="28" rx="7" fill="#38bdf8" stroke="#111" stroke-width="3"/>
+                  <path d="M-4-13h8v26H-4z" fill="#ffffff"/><path d="m8-10 9 3v14l-9 3zM-13-9h8v18h-8z" fill="#0284c7" stroke="#111" stroke-width="2"/>
+                  <path d="M-27-18v36" stroke="#111" stroke-width="5"/><path d="M25-10v5m0 10v5" stroke="#e0f2fe" stroke-width="4"/>
+                </g>
+                <g id="racer-p3" class="circuit-racer" style="display:none" transform="translate(100 65) rotate(90)">
+                  <rect x="-20" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="-20" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
+                  <rect x="12" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="12" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
+                  <rect x="-28" y="-14" width="58" height="28" rx="7" fill="#4ade80" stroke="#111" stroke-width="3"/>
+                  <path d="M-4-13h8v26H-4z" fill="#ffe66d"/><path d="m8-10 9 3v14l-9 3zM-13-9h8v18h-8z" fill="#15803d" stroke="#111" stroke-width="2"/>
+                  <path d="M-27-18v36" stroke="#111" stroke-width="5"/><path d="M25-10v5m0 10v5" stroke="#dcfce7" stroke-width="4"/>
+                </g>
+                <g id="racer-p4" class="circuit-racer" style="display:none" transform="translate(100 65) rotate(90)">
+                  <rect x="-20" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="-20" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
+                  <rect x="12" y="-20" width="13" height="9" rx="2" fill="#0e1014"/><rect x="12" y="11" width="13" height="9" rx="2" fill="#0e1014"/>
+                  <rect x="-28" y="-14" width="58" height="28" rx="7" fill="#c084fc" stroke="#111" stroke-width="3"/>
+                  <path d="M-4-13h8v26H-4z" fill="#f472b6"/><path d="m8-10 9 3v14l-9 3zM-13-9h8v18h-8z" fill="#7e22ce" stroke="#111" stroke-width="2"/>
+                  <path d="M-27-18v36" stroke="#111" stroke-width="5"/><path d="M25-10v5m0 10v5" stroke="#f3e8ff" stroke-width="4"/>
+                </g>
+              </svg>
+            </div>
+            <p class="muted">Ghost unavailable: saved sessions have no recorded progress timeline.</p>
+          </div>
+          <div class="keyboard-section">
+            <div class="section-heading compact-keys-heading"><h2>Your keys, in focus.</h2><span class="muted">This session · QWERTY</span></div>
+            <div id="live-keyboard" class="panel keyboard-panel"></div>
+            <div class="weak-strip"><p id="live-weak"></p><button data-practice>Practice Weak Keys</button></div>
+          </div>
+        </div>
+      </div>
+      <p class="muted small flow-footer-note">Ending or leaving an unfinished test discards it. Completed tests save automatically.</p>
+    </section>
+
+    <section id="results" class="view" hidden aria-labelledby="results-title">
+      <p class="eyebrow">02 / ONE STEP FORWARD</p><h1 id="results-title" tabindex="-1">That's progress.</h1><p id="result-description" class="subtitle"></p>
+      <div class="panel result-panel"><div class="metrics"><div><strong id="result-wpm"></strong><span>WPM</span></div><div><strong id="result-accuracy"></strong><span>ACCURACY</span></div><div><strong id="result-mistakes"></strong><span>MISTAKES</span></div><div><strong id="result-characters"></strong><span>CHARACTERS ENTERED</span></div></div><p id="result-details"></p><p id="result-weak"></p><p id="save-status" role="status"></p></div>
+      <div id="mp-results-leaderboard" class="panel mp-leaderboard-panel" hidden>
+        <h2>Multiplayer Standings</h2>
+        <div id="mp-leaderboard-list"></div>
+      </div>
+      <p id="personal-best-achievement" class="achievement" hidden></p>
+      <p id="practice-feedback" class="practice-feedback" hidden></p>
+      <div class="actions results-actions"><button id="try-again" class="primary">Try Again ↗</button><button id="result-practice" data-practice>Practice Weak Keys</button><a class="button" href="#stats">View Stats</a><a href="#home">Back to Home</a></div>
+    </section>
+
+    <section id="stats" class="view" hidden aria-labelledby="stats-title">
+      <div class="section-heading"><div><p class="eyebrow">YOUR WORK, IN NUMBERS</p><h1 id="stats-title" tabindex="-1">Every session counts.</h1></div><button class="primary" data-practice>Practice Weak Keys ↗</button></div>
+      <h2>Personal bests <span class="muted small">WPM · all modes</span></h2><div id="personal-bests" class="metrics bests"></div>
+      <div class="panel chart-panel"><div class="section-heading"><h2>The bigger picture.</h2><label class="filter-label">Mode<select id="history-filter"><option value="all">All modes</option><option value="test">Race Track</option><option value="custom">Custom Text</option><option value="practice">Practice Drill</option></select></label></div><p id="accuracy-summary" class="muted"></p><p id="chart-empty" class="empty"></p><div id="chart-wrap" class="chart-wrap"><canvas id="progress-chart" role="img" aria-label="WPM across completed sessions. Exact values appear in Recent sessions below."></canvas></div></div>
+      <div class="section-heading"><h2>Know your keyboard.</h2><span class="muted">Saved sessions · QWERTY</span></div><div id="stats-keyboard" class="panel keyboard-panel"></div><p id="stats-weak" class="weak-strip"></p>
+      <div class="panel history-panel"><div class="section-heading"><h2>Recent sessions</h2><button id="export-csv" aria-describedby="export-status">Export all history · CSV</button></div><p id="export-status" class="muted" role="status"></p><p id="history-empty" class="empty"></p><div class="table-scroll"><table><caption class="sr-only">Completed tests, newest first</caption><thead><tr><th>Date</th><th>Mode</th><th>Difficulty</th><th>Time</th><th>WPM</th><th>Accuracy</th><th>Mistakes</th></tr></thead><tbody id="history-body"></tbody></table></div></div>
+    </section>
+
+    <section id="settings" class="view" hidden aria-labelledby="settings-title"><p class="eyebrow">MAKE YOURSELF AT HOME</p><h1 id="settings-title" tabindex="-1">Less noise. More focus.</h1><div class="panel settings-panel"><h2>Your workspace</h2><label>Theme<select id="settings-theme" data-theme-select><option value="neo">Neo Yellow</option><option value="dark">Dark</option><option value="light">Light</option></select></label><p id="theme-status" class="muted" role="status">Your theme is saved on this device.</p><hr><h3>Keyboard layout</h3><span class="badge">QWERTY</span><p class="muted">A familiar layout, with insights for each key.</p><h3>Your data stays here.</h3><p class="muted">Up to 100 recent sessions and your personal bests are stored in this browser. No account needed.</p></div></section>
   </main>
-  <script src="script.js" defer></script>
+  <footer><span>TYPE E / A LITTLE BETTER EVERY DAY.</span><span>Accuracy first. Always.</span></footer>
 </body>
 </html>
